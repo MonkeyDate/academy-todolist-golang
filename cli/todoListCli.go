@@ -1,10 +1,10 @@
 package cli
 
 import (
-	"container/list"
+	"academy-todo/models"
 )
 
-func TodoListCli(commandLineFlags []string, todoList *list.List) (modified bool) {
+func TodoListCli(commandLineFlags []string, todoList []models.TodoItem) (modified bool) {
 	// no args -> just list
 	// add -> add item, then print
 	// unknown args -> syntax message
