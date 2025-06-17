@@ -20,20 +20,6 @@ func main() {
 
 	isModified := cli.TodoListCli(os.Args[1:], todoList)
 
-	todoList = append(todoList, models.TodoItem{
-		Description: "Test item",
-		Status:      models.NotStarted,
-	})
-	todoList = append(todoList, models.TodoItem{
-		Description: "Another item",
-		Status:      models.Started,
-	})
-	todoList = append(todoList, models.TodoItem{
-		Description: "Yet another \"item",
-		Status:      models.Started,
-	})
-	isModified = true
-
 	if isModified {
 		err = storage.SaveTodoList(todoList)
 		if err != nil {

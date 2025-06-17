@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"academy-todo/display"
 	"academy-todo/models"
 )
 
@@ -10,7 +11,7 @@ func TodoListCli(commandLineFlags []string, todoList []models.TodoItem) (modifie
 	// unknown args -> syntax message
 
 	if len(commandLineFlags) == 0 {
-		// print list
+		display.PrintList(todoList)
 		return false
 	}
 
