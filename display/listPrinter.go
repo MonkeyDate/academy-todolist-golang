@@ -6,6 +6,11 @@ import (
 )
 
 func PrintList(todoList []models.TodoItem) {
+	if len(todoList) == 0 {
+		fmt.Println("Great work, your TODO list is empty.")
+		return
+	}
+
 	fmt.Println("<index>: <status> - <description>")
 
 	for index, item := range todoList {
