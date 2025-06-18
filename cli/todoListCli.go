@@ -3,17 +3,41 @@ package cli
 import (
 	"academy-todo/display"
 	"academy-todo/models"
+	"errors"
 )
 
-func TodoListCli(commandLineFlags []string, todoList []models.TodoItem) (modified bool) {
+func TodoListCli(args []string, todoList []models.TodoItem) (modified bool, list []models.TodoItem, err error) {
 	// no args -> just list
 	// add -> add item, then print
 	// unknown args -> syntax message
 
-	if len(commandLineFlags) == 0 {
+	if len(args) == 0 {
 		display.PrintList(todoList)
-		return false
+		return false, todoList, nil
 	}
 
-	return false
+	switch args[0] {
+	case "add":
+		todoList, err := addItemToListCommand(todoList, args[1:])
+		if err != nil {
+			return false, todoList, err
+		}
+
+		display.PrintList(todoList)
+		return true, todoList, nil
+
+	case "update":
+		todoList, err := updateItemByIndexCommand(todoList, args[1:])
+		if err != nil {
+			return false, todoList, err
+		}
+
+		display.PrintList(todoList)
+		return true, todoList, nil
+
+	case "delete":
+		panic(errors.New(args[0] + " not implemented"))
+	}
+
+	return false, todoList, nil
 }

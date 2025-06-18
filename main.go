@@ -18,7 +18,11 @@ func main() {
 		todoList = make([]models.TodoItem, 0)
 	}
 
-	isModified := cli.TodoListCli(os.Args[1:], todoList)
+	isModified, todoList, err := cli.TodoListCli(os.Args[1:], todoList)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 
 	if isModified {
 		err = storage.SaveTodoList(todoList)
