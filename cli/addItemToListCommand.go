@@ -3,6 +3,7 @@ package cli
 import (
 	"academy-todo/models"
 	"flag"
+	"log/slog"
 )
 
 func addItemToListCommand(todoList []models.TodoItem, args []string) ([]models.TodoItem, error) {
@@ -12,6 +13,7 @@ func addItemToListCommand(todoList []models.TodoItem, args []string) ([]models.T
 
 	err := addCmd.Parse(args)
 	if err != nil {
+		slog.Error("item cannot be added to TODO list", "err", err)
 		return todoList, err
 	}
 

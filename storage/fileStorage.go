@@ -6,7 +6,7 @@ import (
 	"errors"
 	"io"
 	"io/fs"
-	"log"
+	"log/slog"
 	"os"
 )
 
@@ -15,17 +15,18 @@ const filename string = "todolist.csv"
 func SaveTodoList(list []models.TodoItem) error {
 	f, err := os.Create(filename)
 	if err != nil {
+		slog.Error("TODO list cannot be saved", "filename", filename, "err", err)
 		return err
 	}
 
-	// TODO: from example, not looked into it
-	defer f.Close() // no error handling
+	defer func() { _ = f.Close() }()
 
 	w := csv.NewWriter(f)
 	for _, item := range list {
 		lineValues := []string{string(item.Status), item.Description}
 		err = w.Write(lineValues)
 		if err != nil {
+			slog.Error("TODO list cannot be saved", "filename", filename, "err", err)
 			return err
 		}
 	}
@@ -38,17 +39,15 @@ func LoadTodoList() ([]models.TodoItem, error) {
 	f, err := os.Open(filename)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
+			slog.Info("TODO list does not exist", "filename", filename)
 			return nil, nil
 		}
+
+		slog.Error("TODO list cannot be loaded", "filename", filename, "err", err)
 		return nil, err
 	}
 
-	// TODO: look into defer and how we return errors from it
-	defer func() {
-		if err = f.Close(); err != nil {
-			log.Fatal(err)
-		}
-	}()
+	defer func() { _ = f.Close() }()
 
 	r := csv.NewReader(f)
 	todoItems := make([]models.TodoItem, 0)
@@ -59,6 +58,7 @@ func LoadTodoList() ([]models.TodoItem, error) {
 			break
 		}
 		if err != nil {
+			slog.Error("TODO list cannot be loaded", "filename", filename, "err", err)
 			return nil, err
 		}
 

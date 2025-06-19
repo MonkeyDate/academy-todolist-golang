@@ -4,6 +4,7 @@ import (
 	"academy-todo/models"
 	"errors"
 	"flag"
+	"log/slog"
 )
 
 func updateItemByIndexCommand(todoList []models.TodoItem, args []string) ([]models.TodoItem, error) {
@@ -15,10 +16,12 @@ func updateItemByIndexCommand(todoList []models.TodoItem, args []string) ([]mode
 
 	err := updateCmd.Parse(args)
 	if err != nil {
+		slog.Error("item cannot be updated in TODO list", "err", err)
 		return todoList, err
 	}
 
 	if *index < 0 || *index >= len(todoList) {
+		slog.Warn("item cannot be updated in TODO list, bad index", "index", *index, "todListSize", len(todoList))
 		return todoList, errors.New("index must reference an item in the TODO list")
 	}
 

@@ -14,9 +14,7 @@ func TodoListCli(args []string, todoList []models.TodoItem) (modified bool, list
 
 	switch true {
 	case todoList == nil && len(args) == 0:
-		fmt.Println("There is no TODO list")
-		fmt.Println()
-		fmt.Println("For details of supported commands use -h")
+		fmt.Println(noTodoListHelp)
 		return false, todoList, nil
 
 	case len(args) == 0:
@@ -55,12 +53,20 @@ func TodoListCli(args []string, todoList []models.TodoItem) (modified bool, list
 		return true, todoList, nil
 
 	default:
-		fmt.Println(
-			`Simple TODO list manager
+		fmt.Println(generalCommandHelp)
+		return false, todoList, nil
+	}
+}
+
+const noTodoListHelp = `There is no TODO list
+
+Use "academy-todo add -h" for more information about adding items to the list.`
+
+const generalCommandHelp = `Simple TODO list manager
 
 Usage:
 
-academy-todo >command> [arguments]
+academy-todo <command> [arguments]
 
 The commands are:
 
@@ -68,8 +74,4 @@ The commands are:
 	update  update an item in the list
 	delete  delete an item form the list
 
-Use "academy-todo <command> -h" for more information about a command.`)
-
-		return false, todoList, nil
-	}
-}
+Use "academy-todo <command> -h" for more information about a command.`
