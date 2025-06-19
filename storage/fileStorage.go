@@ -13,6 +13,8 @@ import (
 const filename string = "todolist.csv"
 
 func SaveTodoList(list []models.TodoItem) error {
+	slog.Info("Saving TodoList...")
+
 	f, err := os.Create(filename)
 	if err != nil {
 		slog.Error("TODO list cannot be saved", "filename", filename, "err", err)
@@ -32,6 +34,7 @@ func SaveTodoList(list []models.TodoItem) error {
 	}
 
 	w.Flush()
+	slog.Info("TodoList saved.")
 	return nil
 }
 
