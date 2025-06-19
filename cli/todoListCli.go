@@ -3,7 +3,6 @@ package cli
 import (
 	"academy-todo/display"
 	"academy-todo/models"
-	"errors"
 )
 
 func TodoListCli(args []string, todoList []models.TodoItem) (modified bool, list []models.TodoItem, err error) {
@@ -36,7 +35,13 @@ func TodoListCli(args []string, todoList []models.TodoItem) (modified bool, list
 		return true, todoList, nil
 
 	case "delete":
-		panic(errors.New(args[0] + " not implemented"))
+		todoList, err := deleteItemByIndexCommand(todoList, args[1:])
+		if err != nil {
+			return false, todoList, err
+		}
+
+		display.PrintList(todoList)
+		return true, todoList, nil
 	}
 
 	return false, todoList, nil

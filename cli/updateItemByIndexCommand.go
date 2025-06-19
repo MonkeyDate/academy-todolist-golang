@@ -7,13 +7,13 @@ import (
 )
 
 func updateItemByIndexCommand(todoList []models.TodoItem, args []string) ([]models.TodoItem, error) {
-	addCmd := flag.NewFlagSet("update", flag.ExitOnError)
-	index := addCmd.Int("i", -1, "index of TODO item to update")
-	description := addCmd.String("d", "", "new description of TODO item, or blank")
-	started := addCmd.Bool("started", false, "the TODO item has started")
-	complete := addCmd.Bool("complete", false, "the TODO item has completed")
+	updateCmd := flag.NewFlagSet("update", flag.ExitOnError)
+	index := updateCmd.Int("i", -1, "index of TODO item to update")
+	description := updateCmd.String("d", "", "new description of TODO item, or blank")
+	started := updateCmd.Bool("started", false, "the TODO item has started")
+	complete := updateCmd.Bool("complete", false, "the TODO item has completed")
 
-	err := addCmd.Parse(args)
+	err := updateCmd.Parse(args)
 	if err != nil {
 		return todoList, err
 	}
