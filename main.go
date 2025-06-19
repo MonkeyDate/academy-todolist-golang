@@ -2,8 +2,11 @@ package main
 
 import (
 	"academy-todo/cli"
+	appContext "academy-todo/context"
 	"academy-todo/storage"
+	"context"
 	"fmt"
+	"github.com/google/uuid"
 	"io/fs"
 	"log/slog"
 	"os"
@@ -14,15 +17,15 @@ import (
 // the <icon src="AllIcons.Actions.Execute"/> icon in the gutter and select the <b>Run</b> menu item from here.</p>
 
 func main() {
-	logFile, _ := os.OpenFile(logFilename, os.O_RDWR|os.O_CREATE|os.O_APPEND, fs.ModePerm)
-	if logFile != nil {
-		defer func() { _ = logFile.Close() }()
-		slog.SetDefault(slog.New(slog.NewJSONHandler(logFile, nil)))
-	}
+	ctx := context.Background()
+	traceId := uuid.New().String()
+	ctx = context.WithValue(ctx, appContext.CtxTraceID{}, traceId)
 
-	slog.Info("Starting: ", strings.Join(os.Args[1:], " "))
+	logger := createJsonLogger(traceId)
+	ctx = context.WithValue(ctx, appContext.CtxLogger{}, *logger)
+	logger.Info("Starting: " + strings.Join(os.Args[1:], " "))
 
-	todoList, err := storage.LoadTodoList()
+	todoList, err := storage.LoadTodoList(ctx)
 	if err != nil {
 		fmt.Println("There was a problem loading the TODO list")
 		fmt.Println(err)
@@ -36,11 +39,25 @@ func main() {
 	}
 
 	if isModified {
-		err = storage.SaveTodoList(todoList)
+		err = storage.SaveTodoList(ctx, todoList)
 		if err != nil {
 			fmt.Println(err)
 		}
 	}
+}
+
+func createJsonLogger(traceId string) *slog.Logger {
+	var logger *slog.Logger
+	logFile, _ := os.OpenFile(logFilename, os.O_RDWR|os.O_CREATE|os.O_APPEND, fs.ModePerm)
+	if logFile != nil {
+		logger = slog.New(slog.NewJSONHandler(logFile, nil))
+	} else {
+		logger = slog.Default()
+	}
+
+	logger = logger.With(slog.String("trace_id", traceId))
+
+	return logger
 }
 
 const logFilename = "todolist.log"

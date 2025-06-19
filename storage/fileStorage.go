@@ -1,7 +1,9 @@
 package storage
 
 import (
+	appContext "academy-todo/context"
 	"academy-todo/models"
+	"context"
 	"encoding/csv"
 	"errors"
 	"io"
@@ -12,12 +14,13 @@ import (
 
 const filename string = "todolist.csv"
 
-func SaveTodoList(list []models.TodoItem) error {
-	slog.Info("Saving TodoList...")
+func SaveTodoList(ctx context.Context, list []models.TodoItem) error {
+	logger := ctx.Value(appContext.CtxLogger{}).(slog.Logger)
+	logger.Info("Saving TodoList...")
 
 	f, err := os.Create(filename)
 	if err != nil {
-		slog.Error("TODO list cannot be saved", "filename", filename, "err", err)
+		logger.Error("TODO list cannot be saved", "filename", filename, "err", err)
 		return err
 	}
 
@@ -28,25 +31,27 @@ func SaveTodoList(list []models.TodoItem) error {
 		lineValues := []string{string(item.Status), item.Description}
 		err = w.Write(lineValues)
 		if err != nil {
-			slog.Error("TODO list cannot be saved", "filename", filename, "err", err)
+			logger.Error("TODO list cannot be saved", "filename", filename, "err", err)
 			return err
 		}
 	}
 
 	w.Flush()
-	slog.Info("TodoList saved.")
+	logger.Info("TodoList saved.")
 	return nil
 }
 
-func LoadTodoList() ([]models.TodoItem, error) {
+func LoadTodoList(ctx context.Context) ([]models.TodoItem, error) {
+	logger := ctx.Value(appContext.CtxLogger{}).(slog.Logger)
+
 	f, err := os.Open(filename)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
-			slog.Info("TODO list does not exist", "filename", filename)
+			logger.Info("TODO list does not exist", "filename", filename)
 			return nil, nil
 		}
 
-		slog.Error("TODO list cannot be loaded", "filename", filename, "err", err)
+		logger.Error("TODO list cannot be loaded", "filename", filename, "err", err)
 		return nil, err
 	}
 
@@ -61,7 +66,7 @@ func LoadTodoList() ([]models.TodoItem, error) {
 			break
 		}
 		if err != nil {
-			slog.Error("TODO list cannot be loaded", "filename", filename, "err", err)
+			logger.Error("TODO list cannot be loaded", "filename", filename, "err", err)
 			return nil, err
 		}
 
