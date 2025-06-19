@@ -3,7 +3,9 @@ package storage
 import (
 	"academy-todo/models"
 	"encoding/csv"
+	"errors"
 	"io"
+	"io/fs"
 	"log"
 	"os"
 )
@@ -35,6 +37,9 @@ func SaveTodoList(list []models.TodoItem) error {
 func LoadTodoList() ([]models.TodoItem, error) {
 	f, err := os.Open(filename)
 	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return nil, nil
+		}
 		return nil, err
 	}
 

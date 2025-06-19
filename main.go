@@ -2,7 +2,6 @@ package main
 
 import (
 	"academy-todo/cli"
-	"academy-todo/models"
 	"academy-todo/storage"
 	"fmt"
 	"os"
@@ -14,8 +13,8 @@ import (
 func main() {
 	todoList, err := storage.LoadTodoList()
 	if err != nil {
-		// TODO: consider cli option to initialise list
-		todoList = make([]models.TodoItem, 0)
+		fmt.Println("There was a problem loading the TODO list")
+		fmt.Println(err)
 	}
 
 	isModified, todoList, err := cli.TodoListCli(os.Args[1:], todoList)
