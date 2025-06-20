@@ -22,6 +22,7 @@ func main() {
 
 	ctx, stop := setupContext()
 	defer stop()
+	defer func() { <-ctx.Done() }()
 
 	todoList, err := storage.LoadTodoList(ctx)
 	if err != nil {
@@ -41,10 +42,6 @@ func main() {
 		if err != nil {
 			fmt.Println(err)
 		}
-	}
-
-	select {
-	case <-ctx.Done():
 	}
 }
 
