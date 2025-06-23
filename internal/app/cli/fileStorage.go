@@ -1,8 +1,7 @@
-package main
+package cli
 
 import (
-	appContext "academy-todo/context"
-	"academy-todo/models"
+	"academy-todo/pkg/todo"
 	"context"
 	"encoding/csv"
 	"errors"
@@ -14,8 +13,8 @@ import (
 
 const filename string = "todolist.csv"
 
-func SaveTodoList(ctx context.Context, list []models.TodoItem) error {
-	logger := ctx.Value(appContext.CtxLogger{}).(slog.Logger)
+func SaveTodoList(ctx context.Context, list []todo.Item) error {
+	logger := ctx.Value(CtxLogger{}).(slog.Logger)
 	logger.Info("Saving TodoList...")
 
 	f, err := os.Create(filename)
@@ -41,8 +40,8 @@ func SaveTodoList(ctx context.Context, list []models.TodoItem) error {
 	return nil
 }
 
-func LoadTodoList(ctx context.Context) ([]models.TodoItem, error) {
-	logger := ctx.Value(appContext.CtxLogger{}).(slog.Logger)
+func LoadTodoList(ctx context.Context) ([]todo.Item, error) {
+	logger := ctx.Value(CtxLogger{}).(slog.Logger)
 
 	f, err := os.Open(filename)
 	if err != nil {
@@ -58,7 +57,7 @@ func LoadTodoList(ctx context.Context) ([]models.TodoItem, error) {
 	defer func() { _ = f.Close() }()
 
 	r := csv.NewReader(f)
-	todoItems := make([]models.TodoItem, 0)
+	todoItems := make([]todo.Item, 0)
 
 	for {
 		record, err := r.Read()
@@ -70,7 +69,7 @@ func LoadTodoList(ctx context.Context) ([]models.TodoItem, error) {
 			return nil, err
 		}
 
-		todoItems = append(todoItems, models.TodoItem{Status: models.TodoItemStatus(record[0]), Description: record[1]})
+		todoItems = append(todoItems, todo.Item{Status: todo.ItemStatus(record[0]), Description: record[1]})
 	}
 
 	return todoItems, nil

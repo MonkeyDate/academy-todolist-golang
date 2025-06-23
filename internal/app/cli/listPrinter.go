@@ -1,11 +1,11 @@
-package display
+package cli
 
 import (
-	"academy-todo/models"
+	"academy-todo/pkg/todo"
 	"fmt"
 )
 
-func PrintList(todoList []models.TodoItem) {
+func PrintList(todoList []todo.Item) {
 	if len(todoList) == 0 {
 		fmt.Println("Great work, your TODO list is empty.")
 		return
@@ -18,15 +18,15 @@ func PrintList(todoList []models.TodoItem) {
 		var descriptionColour = colorReset
 
 		switch item.Status {
-		case models.NotStarted:
+		case todo.NotStarted:
 			statusColour = colorRed
 			break
 
-		case models.Started:
+		case todo.Started:
 			statusColour = colorYellow
 			break
 
-		case models.Completed:
+		case todo.Completed:
 			statusColour = colorGreen
 			descriptionColour = colorDarkGrey
 			break

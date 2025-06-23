@@ -1,4 +1,4 @@
-package context
+package cli
 
 type (
 	CtxLogger  struct{}

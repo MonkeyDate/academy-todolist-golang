@@ -1,13 +1,13 @@
 package cli
 
 import (
-	"academy-todo/models"
+	"academy-todo/pkg/todo"
 	"errors"
 	"flag"
 	"log/slog"
 )
 
-func addItemToListCommand(todoList []models.TodoItem, args []string) ([]models.TodoItem, error) {
+func addItemToListCommand(todoList []todo.Item, args []string) ([]todo.Item, error) {
 	addCmd := flag.NewFlagSet("add", flag.ContinueOnError)
 	description := addCmd.String("d", "new-item", "description of TODO item")
 	started := addCmd.Bool("started", false, "has the TODO item already started")
@@ -17,17 +17,17 @@ func addItemToListCommand(todoList []models.TodoItem, args []string) ([]models.T
 		return todoList, err
 	}
 
-	var status models.TodoItemStatus
+	var status todo.ItemStatus
 	if *started == true {
-		status = models.Started
+		status = todo.Started
 	} else {
-		status = models.NotStarted
+		status = todo.NotStarted
 	}
 
-	return append(todoList, models.TodoItem{Description: *description, Status: status}), nil
+	return append(todoList, todo.Item{Description: *description, Status: status}), nil
 }
 
-func deleteItemByIndexCommand(todoList []models.TodoItem, args []string) ([]models.TodoItem, error) {
+func deleteItemByIndexCommand(todoList []todo.Item, args []string) ([]todo.Item, error) {
 	deleteCmd := flag.NewFlagSet("delete", flag.ContinueOnError)
 	index := deleteCmd.Int("i", -1, "index of TODO item to update")
 
@@ -45,7 +45,7 @@ func deleteItemByIndexCommand(todoList []models.TodoItem, args []string) ([]mode
 	return append(todoList[:*index], todoList[*index+1:]...), nil
 }
 
-func updateItemByIndexCommand(todoList []models.TodoItem, args []string) ([]models.TodoItem, error) {
+func updateItemByIndexCommand(todoList []todo.Item, args []string) ([]todo.Item, error) {
 	updateCmd := flag.NewFlagSet("update", flag.ExitOnError)
 	index := updateCmd.Int("i", -1, "index of TODO item to update")
 	description := updateCmd.String("d", "", "new description of TODO item, or blank")
@@ -63,13 +63,13 @@ func updateItemByIndexCommand(todoList []models.TodoItem, args []string) ([]mode
 		return todoList, errors.New("index must reference an item in the TODO list")
 	}
 
-	var status models.TodoItemStatus
+	var status todo.ItemStatus
 	if *complete == true {
-		status = models.Completed
+		status = todo.Completed
 	} else if *started == true {
-		status = models.Started
+		status = todo.Started
 	} else {
-		status = models.NotStarted
+		status = todo.NotStarted
 	}
 
 	itemToUpdate := &todoList[*index]

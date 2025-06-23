@@ -1,13 +1,12 @@
 package cli
 
 import (
-	"academy-todo/display"
-	"academy-todo/models"
+	"academy-todo/pkg/todo"
 	"fmt"
 	"strings"
 )
 
-func TodoListCli(args []string, todoList []models.TodoItem) (modified bool, list []models.TodoItem, err error) {
+func TodoListCli(args []string, todoList []todo.Item) (modified bool, list []todo.Item, err error) {
 	// no args -> just list
 	// add -> add item, then print
 	// unknown args -> syntax message
@@ -18,7 +17,7 @@ func TodoListCli(args []string, todoList []models.TodoItem) (modified bool, list
 		return false, todoList, nil
 
 	case len(args) == 0:
-		display.PrintList(todoList)
+		PrintList(todoList)
 		fmt.Println()
 		fmt.Println("For details of supported commands use -h")
 		return false, todoList, nil
@@ -31,7 +30,7 @@ func TodoListCli(args []string, todoList []models.TodoItem) (modified bool, list
 			return false, todoList, err
 		}
 
-		display.PrintList(todoList)
+		PrintList(todoList)
 		return true, todoList, nil
 
 	case "update", "u":
@@ -40,7 +39,7 @@ func TodoListCli(args []string, todoList []models.TodoItem) (modified bool, list
 			return false, todoList, err
 		}
 
-		display.PrintList(todoList)
+		PrintList(todoList)
 		return true, todoList, nil
 
 	case "delete", "d":
@@ -49,7 +48,7 @@ func TodoListCli(args []string, todoList []models.TodoItem) (modified bool, list
 			return false, todoList, err
 		}
 
-		display.PrintList(todoList)
+		PrintList(todoList)
 		return true, todoList, nil
 
 	default:

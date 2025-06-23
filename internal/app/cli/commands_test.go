@@ -1,7 +1,7 @@
 package cli
 
 import (
-	"academy-todo/models"
+	"academy-todo/pkg/todo"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -20,7 +20,7 @@ func Test_AddItemToListCommand(t *testing.T) {
 
 		list, err := addItemToListCommand(startingList, commandLine[1:])
 
-		expectedItem := models.TodoItem{Status: models.Started, Description: "third_item_started"}
+		expectedItem := todo.Item{Status: todo.Started, Description: "third_item_started"}
 		assert.Nil(t, err, "should not return error")
 		assert.Equal(t, len(list), 3, "list should have 3 items")
 		assert.ObjectsAreEqualValues(expectedItem, list[2])
@@ -32,15 +32,15 @@ func Test_AddItemToListCommand(t *testing.T) {
 
 		list, _ := addItemToListCommand(startingList, commandLine[1:])
 
-		expectedItem := models.TodoItem{Status: models.NotStarted, Description: "new-item"}
+		expectedItem := todo.Item{Status: todo.NotStarted, Description: "new-item"}
 		assert.ObjectsAreEqualValues(expectedItem, list[2])
 	})
 }
 
-func setupPrepopulatedStartingList() (startingList []models.TodoItem) {
-	startingList = make([]models.TodoItem, 2)
-	startingList[0] = models.TodoItem{Status: models.NotStarted, Description: "item-1 not started"}
-	startingList[1] = models.TodoItem{Status: models.Started, Description: "item-2 started"}
+func setupPrepopulatedStartingList() (startingList []todo.Item) {
+	startingList = make([]todo.Item, 2)
+	startingList[0] = todo.Item{Status: todo.NotStarted, Description: "item-1 not started"}
+	startingList[1] = todo.Item{Status: todo.Started, Description: "item-2 started"}
 
 	return
 }

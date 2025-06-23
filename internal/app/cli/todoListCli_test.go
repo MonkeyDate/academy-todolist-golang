@@ -1,17 +1,17 @@
 package cli
 
 import (
-	"academy-todo/models"
+	"academy-todo/pkg/todo"
 	"testing"
 )
 
 func TestTodoListCli_ShouldNotModifyTodoList_IfNoCommandLineFlagsPassed(t *testing.T) {
 	flags := make([]string, 0)
-	todoList := make([]models.TodoItem, 1)
+	todoList := make([]todo.Item, 1)
 
-	_ = append(todoList, models.TodoItem{
+	_ = append(todoList, todo.Item{
 		Description: "desc-1",
-		Status:      models.Started,
+		Status:      todo.Started,
 	})
 
 	isModified, _, _ := TodoListCli(flags, todoList)

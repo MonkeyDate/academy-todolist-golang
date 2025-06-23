@@ -1,8 +1,7 @@
 package main
 
 import (
-	"academy-todo/cli"
-	appContext "academy-todo/context"
+	cli3 "academy-todo/internal/app/cli"
 	"context"
 	"fmt"
 	"github.com/google/uuid"
@@ -22,21 +21,21 @@ func main() {
 	defer ctxCleanup()
 	defer func() { <-ctx.Done() }()
 
-	todoList, err := LoadTodoList(ctx)
+	todoList, err := cli3.LoadTodoList(ctx)
 	if err != nil {
 		fmt.Println("There was a problem loading the TODO list")
 		fmt.Println(err)
 		return
 	}
 
-	isModified, todoList, err := cli.TodoListCli(os.Args[1:], todoList)
+	isModified, todoList, err := cli3.TodoListCli(os.Args[1:], todoList)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
 	if isModified {
-		err = SaveTodoList(ctx, todoList)
+		err = cli3.SaveTodoList(ctx, todoList)
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -47,10 +46,10 @@ func setupContext() (ctx context.Context, cleanup func()) {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGINT)
 
 	traceId := uuid.New().String()
-	ctx = context.WithValue(ctx, appContext.CtxTraceID{}, traceId)
+	ctx = context.WithValue(ctx, cli3.CtxTraceID{}, traceId)
 
 	logger, loggerCleanup := createJsonLogger(traceId)
-	ctx = context.WithValue(ctx, appContext.CtxLogger{}, *logger)
+	ctx = context.WithValue(ctx, cli3.CtxLogger{}, *logger)
 	logger.Info("Starting: " + strings.Join(os.Args[1:], " "))
 
 	cleanup = func() {
