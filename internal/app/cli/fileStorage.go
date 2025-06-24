@@ -13,7 +13,7 @@ import (
 
 const filename string = "todolist.csv"
 
-func SaveTodoList(ctx context.Context, list []todo.Item) error {
+func SaveTodoList(ctx context.Context, list todo.List) error {
 	logger := ctx.Value(CtxLogger{}).(slog.Logger)
 	logger.Info("Saving TodoList...")
 
@@ -26,7 +26,7 @@ func SaveTodoList(ctx context.Context, list []todo.Item) error {
 	defer func() { _ = f.Close() }()
 
 	w := csv.NewWriter(f)
-	for _, item := range list {
+	for _, item := range list.Items {
 		lineValues := []string{string(item.Status), item.Description}
 		err = w.Write(lineValues)
 		if err != nil {
@@ -40,18 +40,18 @@ func SaveTodoList(ctx context.Context, list []todo.Item) error {
 	return nil
 }
 
-func LoadTodoList(ctx context.Context) ([]todo.Item, error) {
+func LoadTodoList(ctx context.Context) (todo.List, error) {
 	logger := ctx.Value(CtxLogger{}).(slog.Logger)
 
 	f, err := os.Open(filename)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			logger.Info("TODO list does not exist", "filename", filename)
-			return nil, nil
+			return todo.List{}, nil
 		}
 
 		logger.Error("TODO list cannot be loaded", "filename", filename, "err", err)
-		return nil, err
+		return todo.List{}, err
 	}
 
 	defer func() { _ = f.Close() }()
@@ -66,11 +66,12 @@ func LoadTodoList(ctx context.Context) ([]todo.Item, error) {
 		}
 		if err != nil {
 			logger.Error("TODO list cannot be loaded", "filename", filename, "err", err)
-			return nil, err
+			return todo.List{}, err
 		}
 
 		todoItems = append(todoItems, todo.Item{Status: todo.ItemStatus(record[0]), Description: record[1]})
 	}
 
-	return todoItems, nil
+	todoList := todo.List{Items: todoItems}
+	return todoList, nil
 }

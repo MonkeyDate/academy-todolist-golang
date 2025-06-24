@@ -7,7 +7,7 @@ import (
 	"log/slog"
 )
 
-func addItemToListCommand(todoList []todo.Item, args []string) ([]todo.Item, error) {
+func addItemToListCommand(todoList todo.List, args []string) (todo.List, error) {
 	addCmd := flag.NewFlagSet("add", flag.ContinueOnError)
 	description := addCmd.String("d", "new-item", "description of TODO item")
 	started := addCmd.Bool("started", false, "has the TODO item already started")
@@ -24,10 +24,11 @@ func addItemToListCommand(todoList []todo.Item, args []string) ([]todo.Item, err
 		status = todo.NotStarted
 	}
 
-	return append(todoList, todo.Item{Description: *description, Status: status}), nil
+	todoList.Items = append(todoList.Items, todo.Item{Description: *description, Status: status})
+	return todoList, nil
 }
 
-func deleteItemByIndexCommand(todoList []todo.Item, args []string) ([]todo.Item, error) {
+func deleteItemByIndexCommand(todoList todo.List, args []string) (todo.List, error) {
 	deleteCmd := flag.NewFlagSet("delete", flag.ContinueOnError)
 	index := deleteCmd.Int("i", -1, "index of TODO item to update")
 
@@ -37,15 +38,16 @@ func deleteItemByIndexCommand(todoList []todo.Item, args []string) ([]todo.Item,
 		return todoList, err
 	}
 
-	if *index < 0 || *index >= len(todoList) {
-		slog.Warn("item cannot be removed form TODO list, bad index", "index", *index, "todListSize", len(todoList))
+	if *index < 0 || *index >= len(todoList.Items) {
+		slog.Warn("item cannot be removed form TODO list, bad index", "index", *index, "todListSize", len(todoList.Items))
 		return todoList, errors.New("index must reference an item in the TODO list")
 	}
 
-	return append(todoList[:*index], todoList[*index+1:]...), nil
+	todoList.Items = append(todoList.Items[:*index], todoList.Items[*index+1:]...)
+	return todoList, nil
 }
 
-func updateItemByIndexCommand(todoList []todo.Item, args []string) ([]todo.Item, error) {
+func updateItemByIndexCommand(todoList todo.List, args []string) (todo.List, error) {
 	updateCmd := flag.NewFlagSet("update", flag.ExitOnError)
 	index := updateCmd.Int("i", -1, "index of TODO item to update")
 	description := updateCmd.String("d", "", "new description of TODO item, or blank")
@@ -58,8 +60,8 @@ func updateItemByIndexCommand(todoList []todo.Item, args []string) ([]todo.Item,
 		return todoList, err
 	}
 
-	if *index < 0 || *index >= len(todoList) {
-		slog.Warn("item cannot be updated in TODO list, bad index", "index", *index, "todListSize", len(todoList))
+	if *index < 0 || *index >= len(todoList.Items) {
+		slog.Warn("item cannot be updated in TODO list, bad index", "index", *index, "todListSize", len(todoList.Items))
 		return todoList, errors.New("index must reference an item in the TODO list")
 	}
 
@@ -72,7 +74,7 @@ func updateItemByIndexCommand(todoList []todo.Item, args []string) ([]todo.Item,
 		status = todo.NotStarted
 	}
 
-	itemToUpdate := &todoList[*index]
+	itemToUpdate := &todoList.Items[*index]
 
 	itemToUpdate.Status = status
 

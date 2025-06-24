@@ -22,8 +22,8 @@ func Test_AddItemToListCommand(t *testing.T) {
 
 		expectedItem := todo.Item{Status: todo.Started, Description: "third_item_started"}
 		assert.Nil(t, err, "should not return error")
-		assert.Equal(t, len(list), 3, "list should have 3 items")
-		assert.ObjectsAreEqualValues(expectedItem, list[2])
+		assert.Equal(t, len(list.Items), 3, "list should have 3 items")
+		assert.ObjectsAreEqualValues(expectedItem, list.Items[2])
 	})
 
 	t.Run("should add item with default values if values are not specified", func(t *testing.T) {
@@ -33,14 +33,14 @@ func Test_AddItemToListCommand(t *testing.T) {
 		list, _ := addItemToListCommand(startingList, commandLine[1:])
 
 		expectedItem := todo.Item{Status: todo.NotStarted, Description: "new-item"}
-		assert.ObjectsAreEqualValues(expectedItem, list[2])
+		assert.ObjectsAreEqualValues(expectedItem, list.Items[2])
 	})
 }
 
-func setupPrepopulatedStartingList() (startingList []todo.Item) {
-	startingList = make([]todo.Item, 2)
-	startingList[0] = todo.Item{Status: todo.NotStarted, Description: "item-1 not started"}
-	startingList[1] = todo.Item{Status: todo.Started, Description: "item-2 started"}
+func setupPrepopulatedStartingList() (startingList todo.List) {
+	startingList = todo.List{Items: make([]todo.Item, 2)}
+	startingList.Items[0] = todo.Item{Status: todo.NotStarted, Description: "item-1 not started"}
+	startingList.Items[1] = todo.Item{Status: todo.Started, Description: "item-2 started"}
 
 	return
 }

@@ -5,15 +5,15 @@ import (
 	"fmt"
 )
 
-func PrintList(todoList []todo.Item) {
-	if len(todoList) == 0 {
+func PrintList(todoList todo.List) {
+	if len(todoList.Items) == 0 {
 		fmt.Println("Great work, your TODO list is empty.")
 		return
 	}
 
 	fmt.Println("<index>: <status> - <description>")
 
-	for index, item := range todoList {
+	for index, item := range todoList.Items {
 		var statusColour string
 		var descriptionColour = colorReset
 
