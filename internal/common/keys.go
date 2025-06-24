@@ -1,4 +1,4 @@
-package cli
+package common
 
 type (
 	CtxLogger  struct{}

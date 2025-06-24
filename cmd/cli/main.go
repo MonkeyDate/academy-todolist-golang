@@ -2,11 +2,10 @@ package main
 
 import (
 	cli3 "academy-todo/internal/app/cli"
+	"academy-todo/internal/common"
 	"context"
 	"fmt"
 	"github.com/google/uuid"
-	"io/fs"
-	"log/slog"
 	"os"
 	"os/signal"
 	"strings"
@@ -21,7 +20,7 @@ func main() {
 	defer ctxCleanup()
 	defer func() { <-ctx.Done() }()
 
-	todoList, err := cli3.LoadTodoList(ctx)
+	todoList, err := common.LoadTodoList(ctx)
 	if err != nil {
 		fmt.Println("There was a problem loading the TODO list")
 		fmt.Println(err)
@@ -35,7 +34,7 @@ func main() {
 	}
 
 	if isModified {
-		err = cli3.SaveTodoList(ctx, todoList)
+		err = common.SaveTodoList(ctx, todoList)
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -46,10 +45,10 @@ func setupContext() (ctx context.Context, cleanup func()) {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGINT)
 
 	traceId := uuid.New().String()
-	ctx = context.WithValue(ctx, cli3.CtxTraceID{}, traceId)
+	ctx = context.WithValue(ctx, common.CtxTraceID{}, traceId)
 
-	logger, loggerCleanup := createJsonLogger(traceId)
-	ctx = context.WithValue(ctx, cli3.CtxLogger{}, *logger)
+	logger, loggerCleanup := common.CreateJsonLogger(traceId)
+	ctx = context.WithValue(ctx, common.CtxLogger{}, *logger)
 	logger.Info("Starting: " + strings.Join(os.Args[1:], " "))
 
 	cleanup = func() {
@@ -59,24 +58,3 @@ func setupContext() (ctx context.Context, cleanup func()) {
 
 	return
 }
-
-func createJsonLogger(traceID string) (logger *slog.Logger, cleanup func()) {
-	logFile, _ := os.OpenFile(logFilename, os.O_RDWR|os.O_CREATE|os.O_APPEND, fs.ModePerm)
-	cleanup = func() {
-		if logFile != nil {
-			_ = logFile.Close()
-		}
-	}
-
-	if logFile != nil {
-		logger = slog.New(slog.NewJSONHandler(logFile, nil))
-	} else {
-		logger = slog.Default()
-	}
-
-	logger = logger.With(slog.String("trace_id", traceID))
-
-	return
-}
-
-const logFilename = "todolist.log"
