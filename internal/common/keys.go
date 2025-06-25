@@ -7,7 +7,7 @@ import (
 
 type (
 	ctxLogger  struct{}
-	CtxTraceID struct{}
+	ctxTraceID struct{}
 )
 
 func SetLogger(ctx context.Context, logger *slog.Logger) context.Context {
@@ -17,4 +17,13 @@ func SetLogger(ctx context.Context, logger *slog.Logger) context.Context {
 func GetLogger(ctx context.Context) slog.Logger {
 	logger := ctx.Value(ctxLogger{}).(slog.Logger)
 	return logger
+}
+
+func SetTraceID(ctx context.Context, traceID string) context.Context {
+	return context.WithValue(ctx, ctxTraceID{}, traceID)
+}
+
+func GetTraceID(ctx context.Context) string {
+	traceID := ctx.Value(ctxTraceID{}).(string)
+	return traceID
 }

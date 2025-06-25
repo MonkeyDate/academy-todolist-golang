@@ -2,33 +2,37 @@ package main
 
 import (
 	"academy-todo/internal/common"
-	"context"
 	"github.com/google/uuid"
 	"net/http"
 )
 
 func TraceIDMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// TODO: get traceid from header first
-		traceID := uuid.New().String()
+	return http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			traceID := r.Header.Get("X-Trace-Id")
 
-		ctx := context.WithValue(r.Context(), common.CtxTraceID{}, traceID)
+			if traceID == "" {
+				traceID = uuid.New().String()
+			}
 
-		next.ServeHTTP(w, r.WithContext(ctx))
-	})
+			ctx := common.SetTraceID(r.Context(), traceID)
+
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
 }
 
 func LoggerMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		traceID, _ := r.Context().Value(common.CtxTraceID{}).(string)
-		logger, loggerCleanup := common.CreateJsonLogger(traceID)
+	return http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			traceID := common.GetTraceID(r.Context())
+			logger, loggerCleanup := common.CreateJsonLogger(traceID)
 
-		ctx := common.SetLogger(r.Context(), logger)
-		go func() {
-			<-ctx.Done()
-			loggerCleanup()
-		}()
+			ctx := common.SetLogger(r.Context(), logger)
+			go func() {
+				<-ctx.Done()
+				loggerCleanup()
+			}()
 
-		next.ServeHTTP(w, r.WithContext(ctx))
-	})
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
 }

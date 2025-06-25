@@ -15,7 +15,7 @@ func Start() (err error) {
 	mux.HandleFunc("/delete", onlyOnGET(handleDelete))
 
 	fmt.Println("Server running on http://localhost:8080")
-	serverStack := LoggerMiddleware(TraceIDMiddleware(mux))
+	serverStack := TraceIDMiddleware(LoggerMiddleware(mux))
 	return http.ListenAndServe(":8080", serverStack)
 }
 
