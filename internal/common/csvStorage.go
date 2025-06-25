@@ -7,14 +7,13 @@ import (
 	"errors"
 	"io"
 	"io/fs"
-	"log/slog"
 	"os"
 )
 
 const filename string = "todolist.csv"
 
 func SaveTodoList(ctx context.Context, list todo.List) error {
-	logger := ctx.Value(CtxLogger{}).(slog.Logger)
+	logger := GetLogger(ctx)
 	logger.Info("Saving TodoList...")
 
 	f, err := os.Create(filename)
@@ -41,7 +40,7 @@ func SaveTodoList(ctx context.Context, list todo.List) error {
 }
 
 func LoadTodoList(ctx context.Context) (todo.List, error) {
-	logger := ctx.Value(CtxLogger{}).(slog.Logger)
+	logger := GetLogger(ctx)
 
 	f, err := os.Open(filename)
 	if err != nil {

@@ -1,12 +1,11 @@
 package main
 
 import (
-	"academy-todo/internal/app/web"
 	"fmt"
 )
 
 func main() {
-	err := web.Start()
+	err := Start()
 	if err != nil {
 		fmt.Println(err)
 	}

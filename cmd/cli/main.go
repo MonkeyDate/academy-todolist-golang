@@ -1,7 +1,6 @@
 package main
 
 import (
-	cli3 "academy-todo/internal/app/cli"
 	"academy-todo/internal/common"
 	"context"
 	"fmt"
@@ -16,9 +15,7 @@ import (
 // the <icon src="AllIcons.Actions.Execute"/> icon in the gutter and select the <b>Run</b> menu item from here.</p>
 
 func main() {
-	ctx, ctxCleanup := setupContext()
-	defer ctxCleanup()
-	defer func() { <-ctx.Done() }()
+	ctx := setupContext()
 
 	todoList, err := common.LoadTodoList(ctx)
 	if err != nil {
@@ -27,7 +24,7 @@ func main() {
 		return
 	}
 
-	isModified, todoList, err := cli3.TodoListCli(os.Args[1:], todoList)
+	isModified, todoList, err := TodoListCli(os.Args[1:], todoList)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -41,20 +38,21 @@ func main() {
 	}
 }
 
-func setupContext() (ctx context.Context, cleanup func()) {
+func setupContext() (ctx context.Context) {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGINT)
 
 	traceId := uuid.New().String()
 	ctx = context.WithValue(ctx, common.CtxTraceID{}, traceId)
 
 	logger, loggerCleanup := common.CreateJsonLogger(traceId)
-	ctx = context.WithValue(ctx, common.CtxLogger{}, *logger)
-	logger.Info("Starting: " + strings.Join(os.Args[1:], " "))
-
-	cleanup = func() {
+	go func() {
+		<-ctx.Done() // blocks until context is canceled
 		stop()
 		loggerCleanup()
-	}
+	}()
+
+	ctx = common.SetLogger(ctx, logger)
+	logger.Info("Starting: " + strings.Join(os.Args[1:], " "))
 
 	return
 }
