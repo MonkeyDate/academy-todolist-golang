@@ -23,4 +23,5 @@ func BuildStructuredErrorJson(errorMessage string, errorCode int) string {
 const (
 	ErrorGenericError             = -1
 	errorBuildStructuredErrorJson = -2
+	ErrorInvalidParameter         = 100
 )

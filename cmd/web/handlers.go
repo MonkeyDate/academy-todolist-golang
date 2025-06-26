@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -47,6 +48,14 @@ func handleGet(w http.ResponseWriter, r *http.Request) {
 func handleUpdate(w http.ResponseWriter, r *http.Request) {
 	description := r.URL.Query().Get("description")
 	statusParam := r.URL.Query().Get("status")
+	indexParam := r.URL.Query().Get("index")
+
+	index, err := strconv.Atoi(indexParam)
+	if err != nil {
+		logStructuredError(r.Context(), http.StatusBadRequest, "index required and must be a number", ErrorInvalidParameter, err)
+		returnStructuredError(w, http.StatusBadRequest, "index required and must be a number", ErrorInvalidParameter)
+		return
+	}
 
 	if description == "" {
 		description = "new-item-" + time.Now().Format(time.RFC3339)
@@ -59,7 +68,19 @@ func handleUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	todoList.Items = append(todoList.Items, todo.Item{Description: description, Status: status})
+	if index < 0 || index >= len(todoList.Items) {
+		// TODO: WARN?
+		logStructuredError(r.Context(), http.StatusBadRequest, "item cannot be updated, bad index", ErrorInvalidParameter, err)
+		returnStructuredError(w, http.StatusBadRequest, "item cannot be updated, bad index", ErrorInvalidParameter)
+		return
+	}
+
+	itemToUpdate := &todoList.Items[index]
+	itemToUpdate.Status = status
+
+	if description != "" {
+		itemToUpdate.Description = description
+	}
 
 	ok = saveTodolist(w, r, todoList)
 	if !ok {
@@ -70,21 +91,28 @@ func handleUpdate(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleDelete(w http.ResponseWriter, r *http.Request) {
-	description := r.URL.Query().Get("description")
-	statusParam := r.URL.Query().Get("status")
+	indexParam := r.URL.Query().Get("index")
 
-	if description == "" {
-		description = "new-item-" + time.Now().Format(time.RFC3339)
+	index, err := strconv.Atoi(indexParam)
+	if err != nil {
+		logStructuredError(r.Context(), http.StatusBadRequest, "index required and must be a number", ErrorInvalidParameter, err)
+		returnStructuredError(w, http.StatusBadRequest, "index required and must be a number", ErrorInvalidParameter)
+		return
 	}
-
-	status := parseStatus(statusParam)
 
 	todoList, ok := loadTodolist(w, r)
 	if !ok {
 		return
 	}
 
-	todoList.Items = append(todoList.Items, todo.Item{Description: description, Status: status})
+	if index < 0 || index >= len(todoList.Items) {
+		// TODO: WARN?
+		logStructuredError(r.Context(), http.StatusBadRequest, "item cannot be removed form TODO list, bad index", ErrorInvalidParameter, err)
+		returnStructuredError(w, http.StatusBadRequest, "item cannot be removed form TODO list, bad index", ErrorInvalidParameter)
+		return
+	}
+
+	todoList.Items = append(todoList.Items[:index], todoList.Items[index+1:]...)
 
 	ok = saveTodolist(w, r, todoList)
 	if !ok {
