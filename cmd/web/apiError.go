@@ -1,10 +1,8 @@
 package main
 
 import (
-	"academy-todo/internal/common"
-	"context"
 	"encoding/json"
-	"net/http"
+	"strconv"
 )
 
 type APIError struct {
@@ -13,30 +11,16 @@ type APIError struct {
 	// Detail  string `json:"detail,omitempty"` // optional machine-readable detail
 }
 
-func ReturnStructuredError(w http.ResponseWriter, httpStatusCode int, errorMessage string, errorCode int) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(httpStatusCode)
-
-	structuredError := APIError{Code: errorCode, Message: errorMessage}
-	_ = json.NewEncoder(w).Encode(structuredError)
-}
-
-func LogStructuredError(ctx context.Context, httpStatusCode int, errorMessage string, errorCode int, sourceError error) {
-	logger := common.GetLogger(ctx)
-
-	args := []any{
-		"httpStatusCode", httpStatusCode,
-		"sourceError", sourceError,
-	}
-
-	structuredError := APIError{Code: errorCode, Message: errorMessage}
+func BuildStructuredErrorJson(errorMessage string, errorCode int) string {
+	structuredError := APIError{Message: errorMessage, Code: errorCode}
 	if structuredJson, err := json.Marshal(structuredError); err == nil {
-		args = append(args, "error", string(structuredJson))
+		return string(structuredJson)
 	}
 
-	logger.Error(errorMessage, args...)
+	return "{ \"code\": " + strconv.Itoa(errorBuildStructuredErrorJson) + " }"
 }
 
 const (
-	ErrorGenericError = -1
+	ErrorGenericError             = -1
+	errorBuildStructuredErrorJson = -2
 )

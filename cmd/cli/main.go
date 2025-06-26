@@ -42,7 +42,7 @@ func setupContext() (ctx context.Context) {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGINT)
 
 	traceId := uuid.New().String()
-	ctx = context.WithValue(ctx, common.CtxTraceID{}, traceId)
+	ctx = common.SetTraceID(ctx, traceId)
 
 	logger, loggerCleanup := common.CreateJsonLogger(traceId)
 	go func() {

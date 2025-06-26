@@ -9,6 +9,7 @@ func Start() (err error) {
 	// TODO: start the server on a seperate thread
 
 	mux := http.NewServeMux()
+	// using GET for everything to keep testing easy
 	mux.HandleFunc("/create", onlyOnGET(handleCreate))
 	mux.HandleFunc("/get", onlyOnGET(handleGet))
 	mux.HandleFunc("/update", onlyOnGET(handleUpdate))
