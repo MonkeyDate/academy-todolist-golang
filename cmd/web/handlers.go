@@ -3,7 +3,6 @@ package main
 import (
 	"academy-todo/internal/common"
 	"academy-todo/pkg/todo"
-	"context"
 	"encoding/json"
 	"net/http"
 	"strconv"
@@ -12,6 +11,8 @@ import (
 )
 
 func handleCreate(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	logger := common.GetLogger(ctx)
 	description := r.URL.Query().Get("description")
 	statusParam := r.URL.Query().Get("status")
 
@@ -21,39 +22,62 @@ func handleCreate(w http.ResponseWriter, r *http.Request) {
 
 	status := parseStatus(statusParam)
 
-	todoList, ok := loadTodolist(w, r)
-	if !ok {
+	todoList, err := common.LoadTodoList(ctx)
+	if err != nil {
+		logger.Error("Failed loading TODO list", "httpStatusCode", http.StatusInternalServerError, "sourceError", err, "errorCode", ErrorGenericError)
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(APIError{Message: "Unable to load TODO list", Code: ErrorGenericError})
 		return
 	}
 
 	todoList.Items = append(todoList.Items, todo.Item{Description: description, Status: status})
 
-	ok = saveTodolist(w, r, todoList)
-	if !ok {
+	err = common.SaveTodoList(ctx, todoList)
+	if err != nil {
+		logger.Error("Failed to save TODO list", "httpStatusCode", http.StatusInternalServerError, "sourceError", err, "errorCode", ErrorGenericError)
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(APIError{Message: "Unable to save TODO list", Code: ErrorGenericError})
 		return
 	}
 
-	returnTodoListSuccess(w, r, todoList)
+	_ = returnTodoListSuccess(w, r, todoList)
 }
 
 func handleGet(w http.ResponseWriter, r *http.Request) {
-	todoList, ok := loadTodolist(w, r)
-	if !ok {
+	ctx := r.Context()
+
+	todoList, err := common.LoadTodoList(ctx)
+	if err != nil {
+		logger := common.GetLogger(ctx)
+		logger.Error("Failed loading TODO list", "httpStatusCode", http.StatusInternalServerError, "sourceError", err, "errorCode", ErrorGenericError)
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(APIError{Message: "Unable to load TODO list", Code: ErrorGenericError})
 		return
 	}
 
-	returnTodoListSuccess(w, r, todoList)
+	_ = returnTodoListSuccess(w, r, todoList)
 }
 
 func handleUpdate(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	logger := common.GetLogger(ctx)
 	description := r.URL.Query().Get("description")
 	statusParam := r.URL.Query().Get("status")
 	indexParam := r.URL.Query().Get("index")
 
 	index, err := strconv.Atoi(indexParam)
 	if err != nil {
-		logStructuredError(r.Context(), http.StatusBadRequest, "index required and must be a number", ErrorInvalidParameter, err)
-		returnStructuredError(w, http.StatusBadRequest, "index required and must be a number", ErrorInvalidParameter)
+		logger.Error("index required and must be a number", "httpStatusCode", http.StatusBadRequest, "sourceError", err, "errorCode", ErrorInvalidParameter)
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(APIError{Message: "index required and must be a number", Code: ErrorInvalidParameter})
 		return
 	}
 
@@ -63,15 +87,23 @@ func handleUpdate(w http.ResponseWriter, r *http.Request) {
 
 	status := parseStatus(statusParam)
 
-	todoList, ok := loadTodolist(w, r)
-	if !ok {
+	todoList, err := common.LoadTodoList(ctx)
+	if err != nil {
+		logger := common.GetLogger(ctx)
+		logger.Error("Failed loading TODO list", "httpStatusCode", http.StatusInternalServerError, "sourceError", err, "errorCode", ErrorGenericError)
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(APIError{Message: "Unable to load TODO list", Code: ErrorGenericError})
 		return
 	}
 
 	if index < 0 || index >= len(todoList.Items) {
-		// TODO: WARN?
-		logStructuredError(r.Context(), http.StatusBadRequest, "item cannot be updated, bad index", ErrorInvalidParameter, err)
-		returnStructuredError(w, http.StatusBadRequest, "item cannot be updated, bad index", ErrorInvalidParameter)
+		logger.Warn("item cannot be updated, bad index", "httpStatusCode", http.StatusBadRequest, "sourceError", err, "errorCode", ErrorInvalidParameter)
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(APIError{Message: "item cannot be updated, bad index", Code: ErrorInvalidParameter})
 		return
 	}
 
@@ -82,74 +114,66 @@ func handleUpdate(w http.ResponseWriter, r *http.Request) {
 		itemToUpdate.Description = description
 	}
 
-	ok = saveTodolist(w, r, todoList)
-	if !ok {
+	err = common.SaveTodoList(ctx, todoList)
+	if err != nil {
+		logger.Error("Failed to save TODO list", "httpStatusCode", http.StatusInternalServerError, "sourceError", err, "errorCode", ErrorGenericError)
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(APIError{Message: "Unable to save TODO list", Code: ErrorGenericError})
 		return
 	}
 
-	returnTodoListSuccess(w, r, todoList)
+	_ = returnTodoListSuccess(w, r, todoList)
 }
 
 func handleDelete(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	logger := common.GetLogger(ctx)
 	indexParam := r.URL.Query().Get("index")
 
 	index, err := strconv.Atoi(indexParam)
 	if err != nil {
-		logStructuredError(r.Context(), http.StatusBadRequest, "index required and must be a number", ErrorInvalidParameter, err)
-		returnStructuredError(w, http.StatusBadRequest, "index required and must be a number", ErrorInvalidParameter)
+		logger.Warn("index required and must be a number", "httpStatusCode", http.StatusBadRequest, "sourceError", err, "errorCode", ErrorInvalidParameter)
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(APIError{Message: "index required and must be a number", Code: ErrorInvalidParameter})
 		return
 	}
 
-	todoList, ok := loadTodolist(w, r)
-	if !ok {
+	todoList, err := common.LoadTodoList(ctx)
+	if err != nil {
+		logger.Error("Failed loading TODO list", "httpStatusCode", http.StatusInternalServerError, "sourceError", err, "errorCode", ErrorGenericError)
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(APIError{Message: "Unable to load TODO list", Code: ErrorGenericError})
 		return
 	}
 
 	if index < 0 || index >= len(todoList.Items) {
-		// TODO: WARN?
-		logStructuredError(r.Context(), http.StatusBadRequest, "item cannot be removed form TODO list, bad index", ErrorInvalidParameter, err)
-		returnStructuredError(w, http.StatusBadRequest, "item cannot be removed form TODO list, bad index", ErrorInvalidParameter)
+		logger.Warn("item cannot be removed form TODO list, bad index", "httpStatusCode", http.StatusBadRequest, "sourceError", err, "errorCode", ErrorInvalidParameter)
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(APIError{Message: "item cannot be removed form TODO list, bad index", Code: ErrorInvalidParameter})
 		return
 	}
 
 	todoList.Items = append(todoList.Items[:index], todoList.Items[index+1:]...)
 
-	ok = saveTodolist(w, r, todoList)
-	if !ok {
-		return
-	}
-
-	returnTodoListSuccess(w, r, todoList)
-}
-
-func loadTodolist(w http.ResponseWriter, r *http.Request) (todoList todo.List, ok bool) {
-	ctx := r.Context()
-
-	todoList, err := common.LoadTodoList(ctx)
+	err = common.SaveTodoList(ctx, todoList)
 	if err != nil {
-		logStructuredError(ctx, http.StatusInternalServerError, "Failed loading TODO list", ErrorGenericError, err)
-		returnStructuredError(w, http.StatusInternalServerError, "Unable to load TODO list", ErrorGenericError)
-		ok = false
+		logger.Error("Failed to save TODO list", "httpStatusCode", http.StatusInternalServerError, "sourceError", err, "errorCode", ErrorGenericError)
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(APIError{Message: "Unable to save TODO list", Code: ErrorGenericError})
 		return
 	}
 
-	ok = true
-	return
-}
-
-func saveTodolist(w http.ResponseWriter, r *http.Request, list todo.List) (ok bool) {
-	ctx := r.Context()
-
-	err := common.SaveTodoList(ctx, list)
-	if err != nil {
-		logStructuredError(ctx, http.StatusInternalServerError, "Failed to save TODO list", ErrorGenericError, err)
-		returnStructuredError(w, http.StatusInternalServerError, "Unable to save TODO list", ErrorGenericError)
-		ok = false
-		return
-	}
-
-	ok = true
-	return
+	_ = returnTodoListSuccess(w, r, todoList)
 }
 
 func parseStatus(statusParam string) todo.ItemStatus {
@@ -171,29 +195,14 @@ func parseStatus(statusParam string) todo.ItemStatus {
 	return status
 }
 
-func returnTodoListSuccess(w http.ResponseWriter, r *http.Request, todoList todo.List) {
-	ctx := r.Context()
+func returnTodoListSuccess(w http.ResponseWriter, r *http.Request, todoList todo.List) error {
 	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(todoList); err != nil {
-		logStructuredError(ctx, http.StatusInternalServerError, "Failed to encode JSON", ErrorGenericError, err)
-		returnStructuredError(w, http.StatusInternalServerError, "Unable to return updated TODO list", ErrorGenericError)
-		return
-	}
-}
 
-func returnStructuredError(w http.ResponseWriter, httpStatusCode int, errorMessage string, errorCode int) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(httpStatusCode)
-	_ = json.NewEncoder(w).Encode(BuildStructuredErrorJson(errorMessage, errorCode))
-}
-
-func logStructuredError(ctx context.Context, httpStatusCode int, errorMessage string, errorCode int, sourceError error) {
-	args := []any{
-		"httpStatusCode", httpStatusCode,
-		"sourceError", sourceError,
-		"error", BuildStructuredErrorJson(errorMessage, errorCode),
+	var err error
+	if err = json.NewEncoder(w).Encode(todoList); err != nil {
+		logger := common.GetLogger(r.Context())
+		logger.Error("Failed to encode JSON", "httpStatusCode", http.StatusInternalServerError, "sourceError", err, "errorCode", ErrorGenericError)
 	}
 
-	logger := common.GetLogger(ctx)
-	logger.Error(errorMessage, args...)
+	return err
 }
