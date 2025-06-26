@@ -10,14 +10,22 @@ func Start() (err error) {
 
 	mux := http.NewServeMux()
 
+	//
+	// api crud endpoints
 	// using GET for everything to keep testing easy
 	mux.HandleFunc("/create", onlyOnGET(handleCreate))
 	mux.HandleFunc("/get", onlyOnGET(handleGet))
 	mux.HandleFunc("/update", onlyOnGET(handleUpdate))
 	mux.HandleFunc("/delete", onlyOnGET(handleDelete))
 
+	//
+	// static file
 	fs := http.FileServer(http.Dir("./inetpub/static"))
 	mux.Handle("/static/", http.StripPrefix("/static/", fs))
+
+	//
+	// template example
+	mux.HandleFunc("/t/basic.html", setupBasicHtmlHandler())
 
 	fmt.Println("Server running on http://localhost:8080")
 	serverStack := TraceIDMiddleware(LoggerMiddleware(mux))

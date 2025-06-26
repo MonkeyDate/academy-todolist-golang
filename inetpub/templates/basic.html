@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Basic template page</title>
+</head>
+<body>
+<h1>Hello, {{.Name}}!</h1>
+<p>This page was generated at: {{.Timestamp}}</p>
+<p>This time stamp is from a function {{ now }}</p>
+<p>And this text is converted to uppercase in the template {{ .Name | upper }}</p>
+</body>
+</html>
