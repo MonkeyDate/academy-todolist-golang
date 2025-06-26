@@ -9,11 +9,15 @@ func Start() (err error) {
 	// TODO: start the server on a seperate thread
 
 	mux := http.NewServeMux()
+
 	// using GET for everything to keep testing easy
 	mux.HandleFunc("/create", onlyOnGET(handleCreate))
 	mux.HandleFunc("/get", onlyOnGET(handleGet))
 	mux.HandleFunc("/update", onlyOnGET(handleUpdate))
 	mux.HandleFunc("/delete", onlyOnGET(handleDelete))
+
+	fs := http.FileServer(http.Dir("./inetpub/static"))
+	mux.Handle("/static/", http.StripPrefix("/static/", fs))
 
 	fmt.Println("Server running on http://localhost:8080")
 	serverStack := TraceIDMiddleware(LoggerMiddleware(mux))
