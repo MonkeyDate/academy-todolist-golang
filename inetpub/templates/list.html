@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>TODO List</title>
+</head>
+<body>
+<h1>User List</h1>
+{{ if .Error }}
+    <p>There was a problem loading the TODO list</p>
+{{ else }}
+    <table border="1">
+        <thead>
+        <tr><th>Status</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+            {{range .List.Items}}
+            <tr>
+                <td>{{.Status}}</td>
+                <td>{{.Description}}</td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
+{{ end }}
+</body>
+</html>

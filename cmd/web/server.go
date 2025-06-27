@@ -26,6 +26,7 @@ func Start() (err error) {
 	//
 	// template example
 	mux.HandleFunc("/t/basic.html", setupBasicHtmlHandler())
+	mux.HandleFunc("/t/list.html", setupTodolistTemplateHandler())
 
 	fmt.Println("Server running on http://localhost:8080")
 	serverStack := TraceIDMiddleware(LoggerMiddleware(mux))
