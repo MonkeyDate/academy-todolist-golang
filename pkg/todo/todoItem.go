@@ -9,6 +9,7 @@ const (
 )
 
 type Item struct {
+	ID          string
 	Description string
 	Status      ItemStatus
 }

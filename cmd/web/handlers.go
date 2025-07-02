@@ -10,6 +10,8 @@ import (
 	"time"
 )
 
+// TODO: no way to distinguish between internal errors and api errors
+
 func handleCreate(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	logger := common.GetLogger(ctx)
@@ -22,29 +24,54 @@ func handleCreate(w http.ResponseWriter, r *http.Request) {
 
 	status := parseStatus(statusParam)
 
-	todoList, err := common.LoadTodoList(ctx)
-	if err != nil {
-		logger.Error("Failed loading TODO list", "httpStatusCode", http.StatusInternalServerError, "sourceError", err, "errorCode", ErrorGenericError)
+	resultChan := BeginCreateItem(ctx, description, status)
+	result := <-resultChan
+
+	if result.err != nil {
+		logger.Error("Failed to add item to TODO list", "httpStatusCode", http.StatusInternalServerError, "sourceError", result.err, "errorCode", ErrorGenericError)
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
-		_ = json.NewEncoder(w).Encode(APIError{Message: "Unable to load TODO list", Code: ErrorGenericError})
+		_ = json.NewEncoder(w).Encode(APIError{Message: "Failed to add item to TODO list", Code: ErrorGenericError})
 		return
+	} else {
+		_ = returnTodoListSuccess(w, r, result.list)
 	}
 
-	todoList.Items = append(todoList.Items, todo.Item{Description: description, Status: status})
-
-	err = common.SaveTodoList(ctx, todoList)
-	if err != nil {
-		logger.Error("Failed to save TODO list", "httpStatusCode", http.StatusInternalServerError, "sourceError", err, "errorCode", ErrorGenericError)
-
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		_ = json.NewEncoder(w).Encode(APIError{Message: "Unable to save TODO list", Code: ErrorGenericError})
-		return
-	}
-
-	_ = returnTodoListSuccess(w, r, todoList)
+	//ctx := r.Context()
+	//logger := common.GetLogger(ctx)
+	//description := r.URL.Query().Get("description")
+	//statusParam := r.URL.Query().Get("status")
+	//
+	//if description == "" {
+	//	description = "new-item-" + time.Now().Format(time.RFC3339)
+	//}
+	//
+	//status := parseStatus(statusParam)
+	//
+	//todoList, err := common.LoadTodoList(ctx)
+	//if err != nil {
+	//	logger.Error("Failed loading TODO list", "httpStatusCode", http.StatusInternalServerError, "sourceError", err, "errorCode", ErrorGenericError)
+	//
+	//	w.Header().Set("Content-Type", "application/json")
+	//	w.WriteHeader(http.StatusInternalServerError)
+	//	_ = json.NewEncoder(w).Encode(APIError{Message: "Unable to load TODO list", Code: ErrorGenericError})
+	//	return
+	//}
+	//
+	//todoList.Items = append(todoList.Items, todo.Item{Description: description, Status: status})
+	//
+	//err = common.SaveTodoList(ctx, todoList)
+	//if err != nil {
+	//	logger.Error("Failed to save TODO list", "httpStatusCode", http.StatusInternalServerError, "sourceError", err, "errorCode", ErrorGenericError)
+	//
+	//	w.Header().Set("Content-Type", "application/json")
+	//	w.WriteHeader(http.StatusInternalServerError)
+	//	_ = json.NewEncoder(w).Encode(APIError{Message: "Unable to save TODO list", Code: ErrorGenericError})
+	//	return
+	//}
+	//
+	//_ = returnTodoListSuccess(w, r, todoList)
 }
 
 func handleGet(w http.ResponseWriter, r *http.Request) {
