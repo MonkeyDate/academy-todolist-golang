@@ -1,14 +1,16 @@
 package main
 
 import (
+	"academy-todo/internal/common"
 	"fmt"
 	"net/http"
 )
 
 func Start() (err error) {
-	// TODO: start the server on a seperate thread
+	logger, cleanup := common.CreateJsonLogger2()
+	defer cleanup()
 
-	StartTodolistStoreActor()
+	StartTodolistStoreActor(logger)
 
 	mux := http.NewServeMux()
 
@@ -31,7 +33,7 @@ func Start() (err error) {
 	mux.HandleFunc("/t/list.html", setupTodolistTemplateHandler())
 
 	fmt.Println("Server running on http://localhost:8080")
-	serverStack := TraceIDMiddleware(LoggerMiddleware(mux))
+	serverStack := TraceIDMiddleware(LoggerMiddleware(mux, logger))
 	return http.ListenAndServe(":8080", serverStack)
 }
 

@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/google/uuid"
+	"log/slog"
 	"time"
 )
 
@@ -82,84 +83,87 @@ func BeginDeleteItem(ctx context.Context, ID string) chan ListActionResult {
 	return request.resultChan
 }
 
-func StartTodolistStoreActor() {
+func StartTodolistStoreActor(logger *slog.Logger) {
 	go func() {
+		logger.Info("StartTodolistStoreActor: enter")
+		defer logger.Info("StartTodolistStoreActor: leave")
+
 		for {
-			select {
-			case action := <-actionChannel:
-				ctx := action.ctx
-
-				todoList, err := common.LoadTodoList(ctx)
-				if err != nil {
-					action.resultChan <- ListActionResult{err: fmt.Errorf("TODO List Store Actor: can't load list: %w", err)}
-					break
-				}
-
-				switch action.actionType {
-				case ActRead:
-					{
-					}
-
-				case ActCreate:
-					{
-						if action.description == "" {
-							action.description = "new-item-" + time.Now().Format(time.RFC3339)
-						}
-
-						id := uuid.New().String()
-						todoList.Items = append(todoList.Items, todo.Item{ID: id, Description: action.description, Status: action.status})
-
-						err = common.SaveTodoList(ctx, todoList)
-						if err != nil {
-							action.resultChan <- ListActionResult{err: fmt.Errorf("TODO List Store Actor: can't save list: %w", err)}
-							break
-						}
-					}
-
-				case ActUpdate:
-					{
-						var toUpdate *todo.Item
-						for i, item := range todoList.Items {
-							if item.ID == action.ID {
-								toUpdate = &todoList.Items[i]
-							}
-						}
-
-						if toUpdate != nil {
-							toUpdate.Status = action.status
-							if action.description != "" {
-								toUpdate.Description = action.description
-							}
-
-							err = common.SaveTodoList(ctx, todoList)
-							if err != nil {
-								action.resultChan <- ListActionResult{err: fmt.Errorf("TODO List Store Actor: can't save list: %w", err)}
-								break
-							}
-						}
-					}
-
-				case ActDelete:
-					{
-						for i, item := range todoList.Items {
-							if item.ID == action.ID {
-								todoList.Items = append(todoList.Items[:i], todoList.Items[i+1:]...)
-
-								err = common.SaveTodoList(ctx, todoList)
-								if err != nil {
-									action.resultChan <- ListActionResult{err: fmt.Errorf("TODO List Store Actor: can't save list: %w", err)}
-									break
-								}
-
-								break
-							}
-						}
-					}
-				}
-
-				action.resultChan <- ListActionResult{list: todoList}
-				break
-			}
+			processAction(<-actionChannel)
 		}
 	}()
+}
+
+func processAction(action actionRequest) {
+	ctx := action.ctx
+
+	todoList, err := common.LoadTodoList(ctx)
+	if err != nil {
+		action.resultChan <- ListActionResult{err: fmt.Errorf("TODO List Store Actor: can't load list: %w", err)}
+		return
+	}
+
+	switch action.actionType {
+	case ActRead:
+		{
+		}
+
+	case ActCreate:
+		{
+			if action.description == "" {
+				action.description = "new-item-" + time.Now().Format(time.RFC3339)
+			}
+
+			id := uuid.New().String()
+			todoList.Items = append(todoList.Items, todo.Item{ID: id, Description: action.description, Status: action.status})
+
+			err = common.SaveTodoList(ctx, todoList)
+			if err != nil {
+				action.resultChan <- ListActionResult{err: fmt.Errorf("TODO List Store Actor: can't save list: %w", err)}
+				return
+			}
+		}
+
+	case ActUpdate:
+		{
+			var toUpdate *todo.Item
+			for i, item := range todoList.Items {
+				if item.ID == action.ID {
+					toUpdate = &todoList.Items[i]
+				}
+			}
+
+			if toUpdate != nil {
+				toUpdate.Status = action.status
+				if action.description != "" {
+					toUpdate.Description = action.description
+				}
+
+				err = common.SaveTodoList(ctx, todoList)
+				if err != nil {
+					action.resultChan <- ListActionResult{err: fmt.Errorf("TODO List Store Actor: can't save list: %w", err)}
+					return
+				}
+			}
+		}
+
+	case ActDelete:
+		{
+			for i, item := range todoList.Items {
+				if item.ID == action.ID {
+					todoList.Items = append(todoList.Items[:i], todoList.Items[i+1:]...)
+
+					err = common.SaveTodoList(ctx, todoList)
+					if err != nil {
+						action.resultChan <- ListActionResult{err: fmt.Errorf("TODO List Store Actor: can't save list: %w", err)}
+						return
+					}
+
+					return
+				}
+			}
+		}
+	}
+
+	action.resultChan <- ListActionResult{list: todoList}
 }
