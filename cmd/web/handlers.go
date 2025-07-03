@@ -3,6 +3,7 @@ package main
 import (
 	"academy-todo/internal/common"
 	"academy-todo/pkg/todo"
+	"context"
 	"encoding/json"
 	"net/http"
 	"strings"
@@ -12,133 +13,116 @@ import (
 
 func handleCreate(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	logger := common.GetLogger(ctx)
 	description := r.URL.Query().Get("description")
-	statusParam := r.URL.Query().Get("status")
-
-	status := parseStatus(statusParam)
+	status := parseStatus(r.URL.Query().Get("status"))
 
 	result := CreateItem(ctx, description, status)
 	if result.err != nil {
-		logger.Error("Failed to add item to TODO list", "httpStatusCode", http.StatusInternalServerError, "sourceError", result.err, "errorCode", ErrorGenericError)
-
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		_ = json.NewEncoder(w).Encode(APIError{Message: "Failed to add item to TODO list", Code: ErrorGenericError})
+		writeAPIFailure(ctx, w, http.StatusInternalServerError, "Create: Failed to add item to TODO list", result.err, ErrorGenericError)
 		return
-	} else {
-		_ = returnTodoListSuccess(w, r, result.list)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	err := json.NewEncoder(w).Encode(result.list)
+	if err != nil {
+		writeLogError(r.Context(), "Failed to encode TODO list", err, ErrorGenericError, http.StatusInternalServerError)
 	}
 }
 
 func handleGet(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	logger := common.GetLogger(ctx)
 
 	result := ReadItems(ctx)
 	if result.err != nil {
-		logger.Error("Failed to load TODO list", "httpStatusCode", http.StatusInternalServerError, "sourceError", result.err, "errorCode", ErrorGenericError)
-
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		_ = json.NewEncoder(w).Encode(APIError{Message: "Failed to load TODO list", Code: ErrorGenericError})
+		writeAPIFailure(ctx, w, http.StatusInternalServerError, "Get: Failed to load TODO list", result.err, ErrorGenericError)
 		return
-	} else {
-		_ = returnTodoListSuccess(w, r, result.list)
 	}
+
+	_ = writeTodoListSuccess(w, r, result.list)
 }
 
 func handleUpdate(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	logger := common.GetLogger(ctx)
-
 	id := r.PathValue("ID")
 	description := r.URL.Query().Get("description")
-	statusParam := r.URL.Query().Get("status")
-	status := parseStatus(statusParam)
+	status := parseStatus(r.URL.Query().Get("status"))
 
 	if id == "" {
-		err := APIError{
-			Message: "ID cannot be empty",
-			Code:    ErrorInvalidParameter,
-		}
-		logger.Error(err.Message, "httpStatusCode", http.StatusBadRequest, "sourceError", err.Code)
-		writeJSONError(w, http.StatusBadRequest, err)
+		writeAPIError(ctx, w, http.StatusBadRequest, "ID cannot be empty", ErrorInvalidParameter)
 		return
 	}
 
 	result := UpdateItem(ctx, id, description, status)
 	if result.err != nil {
-		err := APIError{
-			Message: "Failed to update TODO item",
-			Code:    ErrorGenericError,
-		}
-		logger.Error(err.Message, "httpStatusCode", http.StatusInternalServerError, "sourceError", result.err, "errorCode", err.Code)
-		writeJSONError(w, http.StatusInternalServerError, err)
+		writeAPIFailure(ctx, w, http.StatusInternalServerError, "Update: Failed to update TODO item", result.err, ErrorGenericError)
 		return
 	}
 
-	_ = returnTodoListSuccess(w, r, result.list)
+	_ = writeTodoListSuccess(w, r, result.list)
 }
 
 func handleDelete(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	logger := common.GetLogger(ctx)
-
 	id := r.PathValue("ID")
 	if id == "" {
-		err := APIError{
-			Message: "ID cannot be empty",
-			Code:    ErrorInvalidParameter,
-		}
-		logger.Error(err.Message, "httpStatusCode", http.StatusBadRequest, "sourceError", err.Code)
-		writeJSONError(w, http.StatusBadRequest, err)
+		writeAPIError(ctx, w, http.StatusBadRequest, "ID cannot be empty", ErrorInvalidParameter)
 		return
 	}
 
 	result := DeleteItem(ctx, id)
 	if result.err != nil {
-		err := APIError{
-			Message: "Failed to delete TODO item",
-			Code:    ErrorGenericError,
-		}
-		logger.Error(err.Message, "httpStatusCode", http.StatusInternalServerError, "sourceError", result.err, "errorCode", err.Code)
-		writeJSONError(w, http.StatusInternalServerError, err)
+		writeAPIFailure(ctx, w, http.StatusInternalServerError, "Delete: Failed to delete TODO item", result.err, ErrorGenericError)
 		return
 	}
 
-	_ = returnTodoListSuccess(w, r, result.list)
+	_ = writeTodoListSuccess(w, r, result.list)
 }
 
 func parseStatus(statusParam string) todo.ItemStatus {
-	var status todo.ItemStatus
-
 	switch strings.ToLower(statusParam) {
 	case "not-started", "not_started", "not started":
-		status = todo.NotStarted
-		break
+
+		return todo.NotStarted
 	case "started":
-		status = todo.Started
-		break
+
+		return todo.Started
 	case "complete", "completed":
-		status = todo.Completed
-		break
+		return todo.Completed
 	default:
-		status = todo.NotStarted
+		return todo.NotStarted
 	}
-	return status
 }
 
-func returnTodoListSuccess(w http.ResponseWriter, r *http.Request, todoList todo.List) error {
+func writeTodoListSuccess(w http.ResponseWriter, r *http.Request, list todo.List) error {
 	w.Header().Set("Content-Type", "application/json")
-
-	var err error
-	if err = json.NewEncoder(w).Encode(todoList); err != nil {
-		logger := common.GetLogger(r.Context())
-		logger.Error("Failed to encode JSON", "httpStatusCode", http.StatusInternalServerError, "sourceError", err, "errorCode", ErrorGenericError)
+	err := json.NewEncoder(w).Encode(list)
+	if err != nil {
+		writeLogError(r.Context(), "Failed to encode TODO list", err, ErrorGenericError, http.StatusInternalServerError)
 	}
-
 	return err
+}
+
+func writeAPIError(ctx context.Context, w http.ResponseWriter, status int, msg string, code int) {
+	writeLogError(ctx, msg, nil, code, status)
+	writeJSONError(w, status, APIError{Message: msg, Code: code})
+}
+
+func writeAPIFailure(ctx context.Context, w http.ResponseWriter, status int, msg string, sourceErr error, code int) {
+	writeLogError(ctx, msg, sourceErr, code, status)
+	writeJSONError(w, status, APIError{Message: msg, Code: code})
+}
+
+// TODO: rename
+func writeLogError(ctx context.Context, msg string, sourceErr error, code, httpStatus int) {
+	logger := common.GetLogger(ctx)
+	args := []any{
+		"httpStatusCode", httpStatus,
+		"errorCode", code,
+	}
+	if sourceErr != nil {
+		args = append(args, "sourceError", sourceErr)
+	}
+	logger.Error(msg, args...)
 }
 
 func writeJSONError(w http.ResponseWriter, status int, err APIError) {

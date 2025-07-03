@@ -10,6 +10,14 @@ import (
 	"time"
 )
 
+// TODO: only CreateItem has full context handling
+
+const (
+	errCantLoadListFmt = "TODO List Store Actor: can't load list: %w"
+	errCantSaveListFmt = "TODO List Store Actor: can't save list: %w"
+	errItemNotFoundFmt = "TODO List Store Actor: item not found ID: %s"
+)
+
 const (
 	ActRead   int = 1
 	ActCreate int = 2
@@ -31,7 +39,8 @@ type actionRequest struct {
 var actionChannel = make(chan actionRequest)
 
 type ListActionResult struct {
-	list todo.List
+	list      todo.List
+	createdID string
 
 	err        error
 	isApiError bool
@@ -68,8 +77,10 @@ func CreateItem(ctx context.Context, description string, status todo.ItemStatus)
 
 	case <-ctx.Done():
 		return ListActionResult{err: fmt.Errorf("CreateItem: context Done: %w", ctx.Err())}
-	default:
-		return ListActionResult{err: fmt.Errorf("CreateItem: Action channel full")}
+
+		// this will cause an error if the channel is blocked with another request
+		//default:
+		//	return ListActionResult{err: fmt.Errorf("CreateItem: Action channel full")}
 	}
 }
 
@@ -85,6 +96,7 @@ func UpdateItem(ctx context.Context, ID string, description string, status todo.
 	return <-resultChan
 }
 
+// DeleteItem returns success for an item not found scenario
 func DeleteItem(ctx context.Context, ID string) ListActionResult {
 	resultChan := make(chan ListActionResult, 1)
 	request := actionRequest{
@@ -97,23 +109,27 @@ func DeleteItem(ctx context.Context, ID string) ListActionResult {
 }
 
 func StartTodolistStoreActor(logger *slog.Logger) {
+	// TODO: no graceful shutdown mechanism
+
 	go func() {
 		logger.Info("StartTodolistStoreActor: enter")
 		defer logger.Info("StartTodolistStoreActor: leave")
 
 		for {
-			processAction(<-actionChannel)
+			action := <-actionChannel
+			result := processAction(action)
+			action.resultChan <- result
 		}
 	}()
 }
 
-func processAction(action actionRequest) {
+func processAction(action actionRequest) ListActionResult {
 	ctx := action.ctx
 
+	var createdId string
 	todoList, err := common.LoadTodoList(ctx)
 	if err != nil {
-		action.resultChan <- ListActionResult{err: fmt.Errorf("TODO List Store Actor: can't load list: %w", err)}
-		return
+		return ListActionResult{err: fmt.Errorf(errCantLoadListFmt, err)}
 	}
 
 	switch action.actionType {
@@ -122,64 +138,53 @@ func processAction(action actionRequest) {
 		}
 
 	case ActCreate:
-		{
-			if action.description == "" {
-				action.description = "new-item-" + time.Now().Format(time.RFC3339)
-			}
+		if action.description == "" {
+			action.description = "new-item-" + time.Now().Format(time.RFC3339)
+		}
 
-			id := uuid.New().String()
-			todoList.Items = append(todoList.Items, todo.Item{ID: id, Description: action.description, Status: action.status})
+		createdId = uuid.New().String()
+		todoList.Items = append(todoList.Items, todo.Item{ID: createdId, Description: action.description, Status: action.status})
 
-			err = common.SaveTodoList(ctx, todoList)
-			if err != nil {
-				action.resultChan <- ListActionResult{err: fmt.Errorf("TODO List Store Actor: can't save list: %w", err)}
-				return
-			}
+		err = common.SaveTodoList(ctx, todoList)
+		if err != nil {
+			return ListActionResult{err: fmt.Errorf(errCantSaveListFmt, err)}
 		}
 
 	case ActUpdate:
-		{
-			var toUpdate *todo.Item
-			for i, item := range todoList.Items {
-				if item.ID == action.ID {
-					toUpdate = &todoList.Items[i]
-				}
-			}
-
-			if toUpdate != nil {
-				toUpdate.Status = action.status
-				if action.description != "" {
-					toUpdate.Description = action.description
-				}
-
-				err = common.SaveTodoList(ctx, todoList)
-				if err != nil {
-					action.resultChan <- ListActionResult{err: fmt.Errorf("TODO List Store Actor: can't save list: %w", err)}
-					return
-				}
-			} else {
-				action.resultChan <- ListActionResult{err: fmt.Errorf("TODO List Store Actor: item not found ID: %s ", action.ID)}
-				return
+		var toUpdate *todo.Item
+		for i, item := range todoList.Items {
+			if item.ID == action.ID {
+				toUpdate = &todoList.Items[i]
+				break
 			}
 		}
 
+		if toUpdate != nil {
+			toUpdate.Status = action.status
+			if action.description != "" {
+				toUpdate.Description = action.description
+			}
+
+			err = common.SaveTodoList(ctx, todoList)
+			if err != nil {
+				return ListActionResult{err: fmt.Errorf(errCantSaveListFmt, err)}
+			}
+		} else {
+			return ListActionResult{err: fmt.Errorf(errItemNotFoundFmt, action.ID)}
+		}
+
 	case ActDelete:
-		{
-			for i, item := range todoList.Items {
-				if item.ID == action.ID {
-					todoList.Items = append(todoList.Items[:i], todoList.Items[i+1:]...)
+		for i, item := range todoList.Items {
+			if item.ID == action.ID {
+				todoList.Items = append(todoList.Items[:i], todoList.Items[i+1:]...)
 
-					err = common.SaveTodoList(ctx, todoList)
-					if err != nil {
-						action.resultChan <- ListActionResult{err: fmt.Errorf("TODO List Store Actor: can't save list: %w", err)}
-						return
-					}
-
-					return
+				err = common.SaveTodoList(ctx, todoList)
+				if err != nil {
+					return ListActionResult{err: fmt.Errorf(errCantSaveListFmt, err)}
 				}
 			}
 		}
 	}
 
-	action.resultChan <- ListActionResult{list: todoList}
+	return ListActionResult{list: todoList, createdID: createdId}
 }
