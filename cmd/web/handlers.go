@@ -52,60 +52,62 @@ func handleUpdate(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	logger := common.GetLogger(ctx)
 
+	id := r.PathValue("ID")
 	description := r.URL.Query().Get("description")
 	statusParam := r.URL.Query().Get("status")
-	ID := r.PathValue("ID")
-
-	if len(ID) == 0 {
-		logger.Error("ID cannot be empty string", "httpStatusCode", http.StatusBadRequest, "sourceError", ErrorInvalidParameter)
-
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		_ = json.NewEncoder(w).Encode(APIError{Message: "ID cannot be empty string", Code: ErrorInvalidParameter})
-		return
-	}
-
 	status := parseStatus(statusParam)
 
-	result := UpdateItem(ctx, ID, description, status)
-	if result.err != nil {
-		logger.Error("Failed to update TODO list", "httpStatusCode", http.StatusInternalServerError, "sourceError", result.err, "errorCode", ErrorGenericError)
-
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		_ = json.NewEncoder(w).Encode(APIError{Message: "Failed to update TODO list", Code: ErrorGenericError})
+	if id == "" {
+		err := APIError{
+			Message: "ID cannot be empty",
+			Code:    ErrorInvalidParameter,
+		}
+		logger.Error(err.Message, "httpStatusCode", http.StatusBadRequest, "sourceError", err.Code)
+		writeJSONError(w, http.StatusBadRequest, err)
 		return
-	} else {
-		_ = returnTodoListSuccess(w, r, result.list)
 	}
+
+	result := UpdateItem(ctx, id, description, status)
+	if result.err != nil {
+		err := APIError{
+			Message: "Failed to update TODO item",
+			Code:    ErrorGenericError,
+		}
+		logger.Error(err.Message, "httpStatusCode", http.StatusInternalServerError, "sourceError", result.err, "errorCode", err.Code)
+		writeJSONError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	_ = returnTodoListSuccess(w, r, result.list)
 }
 
 func handleDelete(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	logger := common.GetLogger(ctx)
 
-	ID := r.PathValue("ID")
-
-	if len(ID) == 0 {
-		logger.Error("ID cannot be empty string", "httpStatusCode", http.StatusBadRequest, "sourceError", ErrorInvalidParameter)
-
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		_ = json.NewEncoder(w).Encode(APIError{Message: "ID cannot be empty string", Code: ErrorInvalidParameter})
+	id := r.PathValue("ID")
+	if id == "" {
+		err := APIError{
+			Message: "ID cannot be empty",
+			Code:    ErrorInvalidParameter,
+		}
+		logger.Error(err.Message, "httpStatusCode", http.StatusBadRequest, "sourceError", err.Code)
+		writeJSONError(w, http.StatusBadRequest, err)
 		return
 	}
 
-	result := DeleteItem(ctx, ID)
+	result := DeleteItem(ctx, id)
 	if result.err != nil {
-		logger.Error("Failed to update TODO list", "httpStatusCode", http.StatusInternalServerError, "sourceError", result.err, "errorCode", ErrorGenericError)
-
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		_ = json.NewEncoder(w).Encode(APIError{Message: "Failed to update TODO list", Code: ErrorGenericError})
+		err := APIError{
+			Message: "Failed to delete TODO item",
+			Code:    ErrorGenericError,
+		}
+		logger.Error(err.Message, "httpStatusCode", http.StatusInternalServerError, "sourceError", result.err, "errorCode", err.Code)
+		writeJSONError(w, http.StatusInternalServerError, err)
 		return
-	} else {
-		_ = returnTodoListSuccess(w, r, result.list)
 	}
+
+	_ = returnTodoListSuccess(w, r, result.list)
 }
 
 func parseStatus(statusParam string) todo.ItemStatus {
@@ -137,4 +139,10 @@ func returnTodoListSuccess(w http.ResponseWriter, r *http.Request, todoList todo
 	}
 
 	return err
+}
+
+func writeJSONError(w http.ResponseWriter, status int, err APIError) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(err)
 }
