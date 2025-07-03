@@ -18,9 +18,7 @@ func handleCreate(w http.ResponseWriter, r *http.Request) {
 
 	status := parseStatus(statusParam)
 
-	resultChan := BeginCreateItem(ctx, description, status)
-	result := <-resultChan
-
+	result := CreateItem(ctx, description, status)
 	if result.err != nil {
 		logger.Error("Failed to add item to TODO list", "httpStatusCode", http.StatusInternalServerError, "sourceError", result.err, "errorCode", ErrorGenericError)
 
@@ -37,9 +35,7 @@ func handleGet(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	logger := common.GetLogger(ctx)
 
-	resultChan := BeginReadItems(ctx)
-	result := <-resultChan
-
+	result := ReadItems(ctx)
 	if result.err != nil {
 		logger.Error("Failed to load TODO list", "httpStatusCode", http.StatusInternalServerError, "sourceError", result.err, "errorCode", ErrorGenericError)
 
@@ -71,9 +67,7 @@ func handleUpdate(w http.ResponseWriter, r *http.Request) {
 
 	status := parseStatus(statusParam)
 
-	resultChan := BeginUpdateItem(ctx, ID, description, status)
-	result := <-resultChan
-
+	result := UpdateItem(ctx, ID, description, status)
 	if result.err != nil {
 		logger.Error("Failed to update TODO list", "httpStatusCode", http.StatusInternalServerError, "sourceError", result.err, "errorCode", ErrorGenericError)
 
@@ -101,9 +95,7 @@ func handleDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resultChan := BeginDeleteItem(ctx, ID)
-	result := <-resultChan
-
+	result := DeleteItem(ctx, ID)
 	if result.err != nil {
 		logger.Error("Failed to update TODO list", "httpStatusCode", http.StatusInternalServerError, "sourceError", result.err, "errorCode", ErrorGenericError)
 

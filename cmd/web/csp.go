@@ -31,34 +31,49 @@ type actionRequest struct {
 var actionChannel = make(chan actionRequest)
 
 type ListActionResult struct {
-	err  error
 	list todo.List
+
+	err        error
+	isApiError bool
 }
 
-func BeginReadItems(ctx context.Context) chan ListActionResult {
+func ReadItems(ctx context.Context) ListActionResult {
 	resultChan := make(chan ListActionResult, 1)
 	request := actionRequest{
 		ctx: ctx, resultChan: resultChan,
 		actionType: ActRead,
 	}
 	actionChannel <- request
-
-	return request.resultChan
+	return <-resultChan
 }
 
-func BeginCreateItem(ctx context.Context, description string, status todo.ItemStatus) chan ListActionResult {
+func CreateItem(ctx context.Context, description string, status todo.ItemStatus) ListActionResult {
 	resultChan := make(chan ListActionResult, 1)
 	request := actionRequest{
-		ctx: ctx, resultChan: resultChan,
+		ctx:         ctx,
+		resultChan:  resultChan,
 		actionType:  ActCreate,
-		description: description, status: status,
+		description: description,
+		status:      status,
 	}
-	actionChannel <- request
 
-	return request.resultChan
+	select {
+	case actionChannel <- request:
+		select {
+		case result := <-resultChan:
+			return result
+		case <-ctx.Done():
+			return ListActionResult{err: fmt.Errorf("CreateItem: context Done: %w", ctx.Err())}
+		}
+
+	case <-ctx.Done():
+		return ListActionResult{err: fmt.Errorf("CreateItem: context Done: %w", ctx.Err())}
+	default:
+		return ListActionResult{err: fmt.Errorf("CreateItem: Action channel full")}
+	}
 }
 
-func BeginUpdateItem(ctx context.Context, ID string, description string, status todo.ItemStatus) chan ListActionResult {
+func UpdateItem(ctx context.Context, ID string, description string, status todo.ItemStatus) ListActionResult {
 	resultChan := make(chan ListActionResult, 1)
 	request := actionRequest{
 		ctx: ctx, resultChan: resultChan,
@@ -67,11 +82,10 @@ func BeginUpdateItem(ctx context.Context, ID string, description string, status 
 		description: description, status: status,
 	}
 	actionChannel <- request
-
-	return request.resultChan
+	return <-resultChan
 }
 
-func BeginDeleteItem(ctx context.Context, ID string) chan ListActionResult {
+func DeleteItem(ctx context.Context, ID string) ListActionResult {
 	resultChan := make(chan ListActionResult, 1)
 	request := actionRequest{
 		ctx: ctx, resultChan: resultChan,
@@ -79,8 +93,7 @@ func BeginDeleteItem(ctx context.Context, ID string) chan ListActionResult {
 		ID:         ID,
 	}
 	actionChannel <- request
-
-	return request.resultChan
+	return <-resultChan
 }
 
 func StartTodolistStoreActor(logger *slog.Logger) {
@@ -144,6 +157,9 @@ func processAction(action actionRequest) {
 					action.resultChan <- ListActionResult{err: fmt.Errorf("TODO List Store Actor: can't save list: %w", err)}
 					return
 				}
+			} else {
+				action.resultChan <- ListActionResult{err: fmt.Errorf("TODO List Store Actor: item not found ID: %s ", action.ID)}
+				return
 			}
 		}
 
