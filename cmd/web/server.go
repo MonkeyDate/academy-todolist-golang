@@ -18,9 +18,9 @@ func Start() (err error) {
 	// api crud endpoints
 	// using GET for everything to keep testing easy
 	mux.HandleFunc("GET /create", handleCreate) // TODO: lookup this syntax, check for param filtering etc
-	mux.HandleFunc("/get", onlyOnGET(handleGet))
-	mux.HandleFunc("/update", onlyOnGET(handleUpdate))
-	mux.HandleFunc("/delete", onlyOnGET(handleDelete))
+	mux.HandleFunc("GET /get", handleGet)
+	mux.HandleFunc("GET /update/{ID}", handleUpdate)
+	mux.HandleFunc("GET /delete/{ID}", handleDelete)
 
 	//
 	// static file
@@ -35,14 +35,4 @@ func Start() (err error) {
 	fmt.Println("Server running on http://localhost:8080")
 	serverStack := TraceIDMiddleware(LoggerMiddleware(mux, logger))
 	return http.ListenAndServe(":8080", serverStack)
-}
-
-func onlyOnGET(handler http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-		handler(w, r)
-	}
 }

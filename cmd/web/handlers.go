@@ -58,7 +58,7 @@ func handleUpdate(w http.ResponseWriter, r *http.Request) {
 
 	description := r.URL.Query().Get("description")
 	statusParam := r.URL.Query().Get("status")
-	ID := r.URL.Query().Get("ID")
+	ID := r.PathValue("ID")
 
 	if len(ID) == 0 {
 		logger.Error("ID cannot be empty string", "httpStatusCode", http.StatusBadRequest, "sourceError", ErrorInvalidParameter)
@@ -90,7 +90,7 @@ func handleDelete(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	logger := common.GetLogger(ctx)
 
-	ID := r.URL.Query().Get("ID")
+	ID := r.PathValue("ID")
 
 	if len(ID) == 0 {
 		logger.Error("ID cannot be empty string", "httpStatusCode", http.StatusBadRequest, "sourceError", ErrorInvalidParameter)
