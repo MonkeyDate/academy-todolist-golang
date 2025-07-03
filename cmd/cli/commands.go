@@ -4,6 +4,7 @@ import (
 	"academy-todo/pkg/todo"
 	"errors"
 	"flag"
+	"github.com/google/uuid"
 	"log/slog"
 )
 
@@ -24,7 +25,8 @@ func addItemToListCommand(todoList todo.List, args []string) (todo.List, error) 
 		status = todo.NotStarted
 	}
 
-	todoList.Items = append(todoList.Items, todo.Item{Description: *description, Status: status})
+	id := uuid.New().String()
+	todoList.Items = append(todoList.Items, todo.Item{ID: id, Description: *description, Status: status})
 	return todoList, nil
 }
 
