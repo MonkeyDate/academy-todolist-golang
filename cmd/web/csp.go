@@ -18,18 +18,20 @@ const (
 	errItemNotFoundFmt = "TODO List Store Actor: item not found ID: %s"
 )
 
+type ActionType int
+
 const (
-	ActRead   int = 1
-	ActCreate int = 2
-	ActUpdate int = 3
-	ActDelete int = 4
+	ActRead   ActionType = 1
+	ActCreate ActionType = 2
+	ActUpdate ActionType = 3
+	ActDelete ActionType = 4
 )
 
 type actionRequest struct {
 	ctx        context.Context
 	resultChan chan ListActionResult
 
-	actionType int // ActRead etc
+	actionType ActionType
 
 	description string
 	status      todo.ItemStatus
@@ -39,23 +41,26 @@ type actionRequest struct {
 var actionChannel = make(chan actionRequest)
 
 type ListActionResult struct {
-	list      todo.List
-	createdID string
+	List      todo.List
+	CreatedID string // ID of newly created item (only for Create operations)
 
-	err        error
-	isApiError bool
+	Err        error // Operation error if any
+	IsApiError bool
 }
 
+// ReadItems retrieves a list of TODO items or an error.
 func ReadItems(ctx context.Context) ListActionResult {
 	resultChan := make(chan ListActionResult, 1)
 	request := actionRequest{
-		ctx: ctx, resultChan: resultChan,
+		ctx:        ctx,
+		resultChan: resultChan,
 		actionType: ActRead,
 	}
 	actionChannel <- request
 	return <-resultChan
 }
 
+// CreateItem creates a new TODO item with the given description and status, returning the updated list or an error.
 func CreateItem(ctx context.Context, description string, status todo.ItemStatus) ListActionResult {
 	resultChan := make(chan ListActionResult, 1)
 	request := actionRequest{
@@ -72,11 +77,11 @@ func CreateItem(ctx context.Context, description string, status todo.ItemStatus)
 		case result := <-resultChan:
 			return result
 		case <-ctx.Done():
-			return ListActionResult{err: fmt.Errorf("CreateItem: context Done: %w", ctx.Err())}
+			return ListActionResult{Err: fmt.Errorf("CreateItem: context Done: %w", ctx.Err())}
 		}
 
 	case <-ctx.Done():
-		return ListActionResult{err: fmt.Errorf("CreateItem: context Done: %w", ctx.Err())}
+		return ListActionResult{Err: fmt.Errorf("CreateItem: context Done: %w", ctx.Err())}
 
 		// this will cause an error if the channel is blocked with another request
 		//default:
@@ -84,6 +89,7 @@ func CreateItem(ctx context.Context, description string, status todo.ItemStatus)
 	}
 }
 
+// UpdateItem updates a TODO item identified by its ID with a new description and status, returning the updated list or an error.
 func UpdateItem(ctx context.Context, ID string, description string, status todo.ItemStatus) ListActionResult {
 	resultChan := make(chan ListActionResult, 1)
 	request := actionRequest{
@@ -96,7 +102,8 @@ func UpdateItem(ctx context.Context, ID string, description string, status todo.
 	return <-resultChan
 }
 
-// DeleteItem returns success for an item not found scenario
+// DeleteItem deletes a TODO item identified by its ID, returning the updated list or an error.
+// No error is generated if the requested ID is not present in the TODO list.
 func DeleteItem(ctx context.Context, ID string) ListActionResult {
 	resultChan := make(chan ListActionResult, 1)
 	request := actionRequest{
@@ -129,7 +136,7 @@ func processAction(action actionRequest) ListActionResult {
 	var createdId string
 	todoList, err := common.LoadTodoList(ctx)
 	if err != nil {
-		return ListActionResult{err: fmt.Errorf(errCantLoadListFmt, err)}
+		return ListActionResult{Err: fmt.Errorf(errCantLoadListFmt, err)}
 	}
 
 	switch action.actionType {
@@ -147,7 +154,7 @@ func processAction(action actionRequest) ListActionResult {
 
 		err = common.SaveTodoList(ctx, todoList)
 		if err != nil {
-			return ListActionResult{err: fmt.Errorf(errCantSaveListFmt, err)}
+			return ListActionResult{Err: fmt.Errorf(errCantSaveListFmt, err)}
 		}
 
 	case ActUpdate:
@@ -167,10 +174,10 @@ func processAction(action actionRequest) ListActionResult {
 
 			err = common.SaveTodoList(ctx, todoList)
 			if err != nil {
-				return ListActionResult{err: fmt.Errorf(errCantSaveListFmt, err)}
+				return ListActionResult{Err: fmt.Errorf(errCantSaveListFmt, err)}
 			}
 		} else {
-			return ListActionResult{err: fmt.Errorf(errItemNotFoundFmt, action.ID)}
+			return ListActionResult{Err: fmt.Errorf(errItemNotFoundFmt, action.ID)}
 		}
 
 	case ActDelete:
@@ -180,11 +187,11 @@ func processAction(action actionRequest) ListActionResult {
 
 				err = common.SaveTodoList(ctx, todoList)
 				if err != nil {
-					return ListActionResult{err: fmt.Errorf(errCantSaveListFmt, err)}
+					return ListActionResult{Err: fmt.Errorf(errCantSaveListFmt, err)}
 				}
 			}
 		}
 	}
 
-	return ListActionResult{list: todoList, createdID: createdId}
+	return ListActionResult{List: todoList, CreatedID: createdId}
 }
