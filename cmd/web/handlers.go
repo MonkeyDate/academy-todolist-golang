@@ -19,6 +19,11 @@ func handleCreate(w http.ResponseWriter, r *http.Request) {
 	description := r.URL.Query().Get("description")
 	status := parseStatus(r.URL.Query().Get("status"))
 
+	//
+	// create a wrapped context that has a timeout/timelimit and pass that to CreateItem
+	// allowing us to timeout the operation without the operation having to explicitly
+	// have a timeout
+
 	result := CreateItem(ctx, description, status)
 	if result.Err != nil {
 		writeAPIFailure(ctx, w, http.StatusInternalServerError, "Create: Failed to add item to TODO list", result.Err, ErrorGenericError)
