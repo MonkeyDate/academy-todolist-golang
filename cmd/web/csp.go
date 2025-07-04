@@ -73,6 +73,7 @@ func CreateItem(ctx context.Context, description string, status todo.ItemStatus)
 
 	select {
 	case actionChannel <- request:
+		// TODO: move this select out of the parent select - this works if the parent select is returning early for errors and non-happy path scenarios
 		select {
 		case result := <-resultChan:
 			return result
